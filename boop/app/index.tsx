@@ -8,7 +8,7 @@ import PairingModal from "@/components/pairing-modal";
 export default function Index() {
   const [isPairingVisible, setIsPairingVisible] = useState(false);
   return (
-    <SafeAreaView className="flex-1">
+    <SafeAreaView className="flex-1 bg-bg">
       <Header title="Boop" onPressSettings={() => setIsPairingVisible(true)} />
       <View className="flex-1 items-center justify-center">
         <BoopButton />
