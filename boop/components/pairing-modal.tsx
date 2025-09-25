@@ -1,6 +1,7 @@
-import { useState } from "react";
-import { View, Text, Modal, Button, TextInput } from "react-native";
+import { useState, useEffect } from "react";
+import { View, Text, Modal, Button, TextInput, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { DeviceService } from "@/lib/deviceService";
 
 export type PairingModalProps = {
   visible: boolean;
@@ -8,8 +9,57 @@ export type PairingModalProps = {
 };
 
 export default function PairingModal({ visible, onClose }: PairingModalProps) {
-  const myCode = "ABCD-1234";
+  const [myCode, setMyCode] = useState<string>("");
   const [otherCode, setOtherCode] = useState("");
+  const [isConnecting, setIsConnecting] = useState(false);
+
+  // Get device code when modal opens
+  useEffect(() => {
+    if (visible) {
+      loadDeviceCode();
+    }
+  }, [visible]);
+
+  const loadDeviceCode = async () => {
+    try {
+      const { code } = await DeviceService.registerDevice();
+      setMyCode(code);
+    } catch (error) {
+      Alert.alert("Error", "Failed to load device code");
+      console.error(error);
+    }
+  };
+
+  const handleConnect = async () => {
+    if (!otherCode.trim()) return;
+
+    setIsConnecting(true);
+    try {
+      // Find the device by code
+      const otherDevice = await DeviceService.findDeviceByCode(
+        otherCode.trim()
+      );
+
+      if (!otherDevice) {
+        Alert.alert("Error", "Device not found. Please check the code.");
+        return;
+      }
+
+      // Pair with the device
+      await DeviceService.pairWithDevice(otherDevice.id);
+
+      Alert.alert("Success", "Devices paired successfully!");
+      onClose();
+    } catch (error) {
+      Alert.alert(
+        "Error",
+        "Failed to pair devices. They may already be paired."
+      );
+      console.error(error);
+    } finally {
+      setIsConnecting(false);
+    }
+  };
   return (
     <Modal
       visible={visible}
@@ -50,11 +100,9 @@ export default function PairingModal({ visible, onClose }: PairingModalProps) {
                 <Button title="Cancel" onPress={onClose} />
               </View>
               <Button
-                title="Connect"
-                onPress={() => {
-                  onClose();
-                }}
-                disabled={!otherCode}
+                title={isConnecting ? "Connecting..." : "Connect"}
+                onPress={handleConnect}
+                disabled={!otherCode || isConnecting}
               />
             </View>
           </View>
