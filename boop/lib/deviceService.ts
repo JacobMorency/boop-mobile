@@ -1,6 +1,7 @@
 import { supabase, Device, Pair } from "./supabase";
 import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { PushNotificationService } from "./pushNotificationService";
 
 export class DeviceService {
   private static deviceId: string | null = null;
@@ -22,9 +23,7 @@ export class DeviceService {
   }
 
   // Register this device and get a pairing code (only if not already registered)
-  static async registerDevice(
-    expoPushToken?: string
-  ): Promise<{ deviceId: string; code: string }> {
+  static async registerDevice(): Promise<{ deviceId: string; code: string }> {
     // If we already have device info, return it
     if (this.deviceId && this.deviceCode) {
       return {
@@ -34,6 +33,10 @@ export class DeviceService {
     }
 
     try {
+      // Get push notification token
+      const expoPushToken =
+        await PushNotificationService.registerForPushNotifications();
+
       const { data, error } = await supabase
         .from("devices")
         .insert({
@@ -164,12 +167,27 @@ export class DeviceService {
     if (!pairedDevice) return false;
 
     try {
+      // Insert the ping into database
       const { error } = await supabase.from("pings").insert({
         from_device: this.deviceId,
         to_device: pairedDevice.id,
       });
 
       if (error) throw error;
+
+      // Send push notification if the paired device has a push token
+      if (pairedDevice.expo_push_token) {
+        try {
+          await PushNotificationService.sendPushNotification(
+            pairedDevice.expo_push_token,
+            "Boop!",
+            "Someone just booped you! 👋"
+          );
+        } catch (pushError) {
+          console.error("Failed to send push notification:", pushError);
+          // Don't fail the boop if push notification fails
+        }
+      }
 
       return true;
     } catch (error) {
