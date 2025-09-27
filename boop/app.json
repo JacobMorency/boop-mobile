@@ -7,8 +7,9 @@
     "icon": "./assets/images/icon.png",
     "scheme": "boop",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": false,
+    "newArchEnabled": true,
     "ios": {
+      "newArchEnabled": true,
       "supportsTablet": true,
       "bundleIdentifier": "dev.jacobmorency.boop",
       "usesNonExemptEncryption": false,
@@ -17,6 +18,7 @@
       }
     },
     "android": {
+      "newArchEnabled": true,
       "package": "dev.jacobmorency.boop",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
@@ -33,6 +35,15 @@
       "bundler": "metro"
     },
     "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "newArchEnabled": true,
+            "extraCppFlags": ["-DFOLLY_CFG_NO_COROUTINES=1"]
+          }
+        }
+      ],
       "expo-router",
       "expo-dev-client",
       [
