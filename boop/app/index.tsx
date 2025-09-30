@@ -1,21 +1,31 @@
 import { useState, useEffect } from "react";
-import { View, Alert } from "react-native";
+import { View, Alert, Text } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import Header from "@/components/header";
 import BoopButton from "@/components/boop-button";
-import PairingModal from "@/components/pairing-modal";
+import SettingsModal from "@/components/settings-modal";
 import { DeviceService } from "@/lib/deviceService";
 import { PushNotificationService } from "@/lib/pushNotificationService";
-import * as Notifications from "expo-notifications";
+import { Device } from "@/lib/supabase";
 
 export default function Index() {
-  const [isPairingVisible, setIsPairingVisible] = useState(false);
+  const [isSettingsVisible, setIsSettingsVisible] = useState(false);
+  const [pairedDevice, setPairedDevice] = useState<Device | null>(null);
 
   // Initialize device service and notifications on app start
   useEffect(() => {
     DeviceService.initialize();
     setupNotifications();
+    loadPairedDevice();
   }, []);
+
+  const loadPairedDevice = async () => {
+    try {
+      const device = await DeviceService.getPairedDevice();
+      setPairedDevice(device);
+    } catch (error) {
+      console.error("Failed to load paired device:", error);
+    }
+  };
 
   const setupNotifications = () => {
     // Listen for notifications when app is in foreground
@@ -49,13 +59,29 @@ export default function Index() {
 
   return (
     <SafeAreaView className="flex-1 bg-bg">
-      <Header title="Boop" onPressSettings={() => setIsPairingVisible(true)} />
+      {/* Connection Status - Subtle indicator */}
+      {pairedDevice && (
+        <View className="absolute top-12 left-6 z-10">
+          <View className="flex-row items-center rounded-full px-2 py-1">
+            <View className="w-2 h-2 rounded-full bg-green-500 mr-2"></View>
+            <Text className="text-xs font-medium text-text-muted">
+              {pairedDevice.code}
+            </Text>
+          </View>
+        </View>
+      )}
+
+      {/* Main Content - Centered Boop Button */}
       <View className="flex-1 items-center justify-center">
-        <BoopButton />
+        <BoopButton onLongPress={() => setIsSettingsVisible(true)} />
       </View>
-      <PairingModal
-        visible={isPairingVisible}
-        onClose={() => setIsPairingVisible(false)}
+
+      <SettingsModal
+        visible={isSettingsVisible}
+        onClose={() => {
+          setIsSettingsVisible(false);
+          loadPairedDevice(); // Refresh connection status when settings close
+        }}
       />
     </SafeAreaView>
   );

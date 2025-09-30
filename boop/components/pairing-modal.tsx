@@ -88,7 +88,7 @@ export default function PairingModal({ visible, onClose }: PairingModalProps) {
               <TextInput
                 value={otherCode}
                 onChangeText={setOtherCode}
-                placeholder="XXXX-XXXX"
+                placeholder="XXXXXX"
                 placeholderTextColor="#9CA3AF"
                 autoCapitalize="characters"
                 autoCorrect={false}

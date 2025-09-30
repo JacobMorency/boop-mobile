@@ -196,6 +196,25 @@ export class DeviceService {
     }
   }
 
+  // Disconnect from current partner
+  static async disconnectFromPartner(): Promise<boolean> {
+    if (!this.deviceId) return false;
+
+    try {
+      const { error } = await supabase
+        .from("pairs")
+        .delete()
+        .or(`device_a.eq.${this.deviceId},device_b.eq.${this.deviceId}`);
+
+      if (error) throw error;
+
+      return true;
+    } catch (error) {
+      console.error("Failed to disconnect from partner:", error);
+      return false;
+    }
+  }
+
   // Update last seen timestamp
   static async updateLastSeen(): Promise<void> {
     if (!this.deviceId) return;
