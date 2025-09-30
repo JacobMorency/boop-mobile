@@ -16,6 +16,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 export interface Device {
   id: string;
   code: string;
+  name: string;
   expo_push_token?: string;
   platform?: "ios" | "android" | "web";
   created_at: string;

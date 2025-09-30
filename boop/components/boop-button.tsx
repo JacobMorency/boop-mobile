@@ -87,7 +87,7 @@ export default function BoopButton({ onLongPress }: BoopButtonProps) {
 
   const backgroundColor = colorAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: ["#8B5CF6", "#10B981"],
+    outputRange: ["#EF4444", "#10B981"], // Red to green on success
   });
 
   return (
@@ -95,7 +95,7 @@ export default function BoopButton({ onLongPress }: BoopButtonProps) {
       style={{
         transform: [{ scale: scaleAnim }],
         shadowOpacity: shadowAnim,
-        shadowColor: "#8B5CF6",
+        shadowColor: "#EF4444",
         shadowOffset: {
           width: 0,
           height: 8,

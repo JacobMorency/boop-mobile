@@ -3,6 +3,7 @@ import { View, Alert, Text } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import BoopButton from "@/components/boop-button";
 import SettingsModal from "@/components/settings-modal";
+import NameInputModal from "@/components/name-input-modal";
 import { DeviceService } from "@/lib/deviceService";
 import { PushNotificationService } from "@/lib/pushNotificationService";
 import { Device } from "@/lib/supabase";
@@ -10,13 +11,24 @@ import { Device } from "@/lib/supabase";
 export default function Index() {
   const [isSettingsVisible, setIsSettingsVisible] = useState(false);
   const [pairedDevice, setPairedDevice] = useState<Device | null>(null);
+  const [showNameInput, setShowNameInput] = useState(false);
 
   // Initialize device service and notifications on app start
   useEffect(() => {
-    DeviceService.initialize();
+    initializeApp();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const initializeApp = async () => {
+    await DeviceService.initialize();
     setupNotifications();
-    loadPairedDevice();
-  }, []);
+    await loadPairedDevice();
+
+    // Check if user needs to set their name
+    const deviceInfo = DeviceService.getCurrentDevice();
+    if (!deviceInfo.name || deviceInfo.name === "Anonymous") {
+      setShowNameInput(true);
+    }
+  };
 
   const loadPairedDevice = async () => {
     try {
@@ -81,6 +93,14 @@ export default function Index() {
         onClose={() => {
           setIsSettingsVisible(false);
           loadPairedDevice(); // Refresh connection status when settings close
+        }}
+      />
+
+      <NameInputModal
+        visible={showNameInput}
+        onComplete={() => {
+          setShowNameInput(false);
+          loadPairedDevice(); // Refresh after name setup
         }}
       />
     </SafeAreaView>

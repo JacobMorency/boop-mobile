@@ -1,5 +1,13 @@
 import { useState, useEffect } from "react";
-import { View, Text, Modal, Button, Alert, Pressable } from "react-native";
+import {
+  View,
+  Text,
+  Modal,
+  Button,
+  Alert,
+  Pressable,
+  TextInput,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { DeviceService } from "@/lib/deviceService";
 import { Device } from "@/lib/supabase";
@@ -19,13 +27,24 @@ export default function SettingsModal({
   const [isLoading, setIsLoading] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
   const [showPairingModal, setShowPairingModal] = useState(false);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [currentDevice, setCurrentDevice] = useState<{ name: string | null }>({
+    name: null,
+  });
 
   // Load paired device when modal opens
   useEffect(() => {
     if (visible) {
       loadPairedDevice();
+      loadCurrentDevice();
     }
   }, [visible]);
+
+  const loadCurrentDevice = () => {
+    const deviceInfo = DeviceService.getCurrentDevice();
+    setCurrentDevice({ name: deviceInfo.name });
+  };
 
   const loadPairedDevice = async () => {
     setIsLoading(true);
@@ -85,6 +104,37 @@ export default function SettingsModal({
     loadPairedDevice(); // Refresh the paired device
   };
 
+  const handleEditName = () => {
+    setNewName(currentDevice.name || "");
+    setIsEditingName(true);
+  };
+
+  const handleSaveName = async () => {
+    if (!newName.trim()) {
+      Alert.alert("Error", "Please enter a name");
+      return;
+    }
+
+    try {
+      const success = await DeviceService.updateDeviceName(newName.trim());
+      if (success) {
+        setCurrentDevice({ name: newName.trim() });
+        setIsEditingName(false);
+        Alert.alert("Success", "Name updated successfully!");
+      } else {
+        Alert.alert("Error", "Failed to update name");
+      }
+    } catch (error) {
+      Alert.alert("Error", "Failed to update name");
+      console.error(error);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditingName(false);
+    setNewName("");
+  };
+
   return (
     <>
       <Modal
@@ -109,6 +159,46 @@ export default function SettingsModal({
                 >
                   <Icon name="close" size={20} color="#9CA3AF" />
                 </Pressable>
+              </View>
+
+              {/* Your Name */}
+              <View className="mb-6">
+                <Text className="mb-2 text-sm font-medium text-text-muted">
+                  Your Name
+                </Text>
+                {isEditingName ? (
+                  <View className="space-y-3">
+                    <TextInput
+                      value={newName}
+                      onChangeText={setNewName}
+                      placeholder="Enter your name"
+                      placeholderTextColor="#9CA3AF"
+                      autoCapitalize="words"
+                      autoCorrect={false}
+                      className="rounded-lg border border-border bg-bg px-3 py-2 text-base text-text"
+                      maxLength={50}
+                    />
+                    <View className="flex-row gap-2">
+                      <Button
+                        title="Save"
+                        onPress={handleSaveName}
+                        className="flex-1"
+                      />
+                      <Button
+                        title="Cancel"
+                        onPress={handleCancelEdit}
+                        className="flex-1"
+                      />
+                    </View>
+                  </View>
+                ) : (
+                  <View className="flex-row items-center justify-between rounded-lg border border-border bg-bg p-3">
+                    <Text className="text-base text-text">
+                      {currentDevice.name || "Not set"}
+                    </Text>
+                    <Button title="Edit" onPress={handleEditName} />
+                  </View>
+                )}
               </View>
 
               {/* Connection Status */}
