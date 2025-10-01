@@ -11,6 +11,7 @@ export default function BoopButton({ onLongPress }: BoopButtonProps) {
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const shadowAnim = useRef(new Animated.Value(0.3)).current;
   const colorAnim = useRef(new Animated.Value(0)).current;
+  const successOpacity = useRef(new Animated.Value(0)).current;
   const [isPressed, setIsPressed] = useState(false);
 
   const handleBoop = async () => {
@@ -36,7 +37,20 @@ export default function BoopButton({ onLongPress }: BoopButtonProps) {
       if (success) {
         // Success haptic feedback
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        Alert.alert("Boop!", "Sent successfully!");
+        // Subtle inline confirmation: fade in, delay, fade out
+        Animated.sequence([
+          Animated.timing(successOpacity, {
+            toValue: 1,
+            duration: 200,
+            useNativeDriver: true,
+          }),
+          Animated.delay(900),
+          Animated.timing(successOpacity, {
+            toValue: 0,
+            duration: 250,
+            useNativeDriver: true,
+          }),
+        ]).start();
       } else {
         Alert.alert(
           "Error",
@@ -91,59 +105,79 @@ export default function BoopButton({ onLongPress }: BoopButtonProps) {
   });
 
   return (
-    <Animated.View
-      style={{
-        transform: [{ scale: scaleAnim }],
-        shadowOpacity: shadowAnim,
-        shadowColor: "#EF4444",
-        shadowOffset: {
-          width: 0,
-          height: 8,
-        },
-        shadowRadius: 16,
-        elevation: 8,
-      }}
-    >
-      <Pressable
-        onPress={handleBoop}
-        onLongPress={handleLongPress}
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
-        delayLongPress={500}
-        accessibilityRole="button"
-        accessibilityLabel="Boop"
-        accessibilityHint="Long press to open settings"
+    <View className="items-center">
+      <Animated.View
+        style={{
+          transform: [{ scale: scaleAnim }],
+          shadowOpacity: shadowAnim,
+          shadowColor: "#EF4444",
+          shadowOffset: {
+            width: 0,
+            height: 8,
+          },
+          shadowRadius: 16,
+          elevation: 8,
+        }}
       >
-        <Animated.View
-          style={{
-            width: 160,
-            height: 160,
-            borderRadius: 80,
-            backgroundColor: backgroundColor,
-            overflow: "hidden",
-          }}
+        <Pressable
+          onPress={handleBoop}
+          onLongPress={handleLongPress}
+          onPressIn={handlePressIn}
+          onPressOut={handlePressOut}
+          delayLongPress={500}
+          accessibilityRole="button"
+          accessibilityLabel="Boop"
+          accessibilityHint="Long press to open settings"
         >
-          {/* Gradient Overlay for depth */}
-          <View
+          <Animated.View
             style={{
-              position: "absolute",
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
+              width: 160,
+              height: 160,
               borderRadius: 80,
-              backgroundColor: "rgba(255, 255, 255, 0.1)",
+              backgroundColor: backgroundColor,
+              overflow: "hidden",
             }}
-          />
+          >
+            {/* Gradient Overlay for depth */}
+            <View
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                borderRadius: 80,
+                backgroundColor: "rgba(255, 255, 255, 0.1)",
+              }}
+            />
 
-          {/* Content */}
-          <View className="flex-1 items-center justify-center">
-            <Text className="text-2xl font-bold text-white tracking-wide drop-shadow-sm">
-              Boop!
-            </Text>
-          </View>
-        </Animated.View>
-      </Pressable>
-    </Animated.View>
+            {/* Content */}
+            <View className="flex-1 items-center justify-center">
+              <Text className="text-2xl font-bold text-white tracking-wide drop-shadow-sm">
+                Boop!
+              </Text>
+            </View>
+          </Animated.View>
+        </Pressable>
+      </Animated.View>
+
+      {/* Subtle inline confirmation */}
+      <Animated.View
+        style={{
+          marginTop: 12,
+          opacity: successOpacity,
+          transform: [
+            {
+              translateY: successOpacity.interpolate({
+                inputRange: [0, 1],
+                outputRange: [4, 0],
+              }),
+            },
+          ],
+        }}
+      >
+        <Text className="text-sm text-text-muted">Booped!</Text>
+      </Animated.View>
+    </View>
   );
 }

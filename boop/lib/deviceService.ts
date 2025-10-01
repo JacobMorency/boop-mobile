@@ -227,8 +227,8 @@ export class DeviceService {
           const senderName = this.deviceName || "Someone";
           await PushNotificationService.sendPushNotification(
             pairedDevice.expo_push_token,
-            "Boop!",
-            `${senderName} is thinking of you! 💭`
+            senderName,
+            "I'm thinking of you! 💭"
           );
         } catch (pushError) {
           console.error("Failed to send push notification:", pushError);
