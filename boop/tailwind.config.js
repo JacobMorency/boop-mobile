@@ -6,26 +6,27 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        // Lilac-forward color scheme
         bg: {
-          dark: "#ffd5d3", // oklch(0.92 0.075 20)
-          DEFAULT: "#ffe7e6", // oklch(0.96 0.075 20)
-          light: "#ffffff", // oklch(1 0.075 20)
+          dark: "#ede9fe", // lilac-tinted canvas (violet-100)
+          DEFAULT: "#f5f3ff", // light lilac (violet-50)
+          light: "#ffffff",
         },
         text: {
-          DEFAULT: "#230001", // oklch(0.15 0.15 20)
-          muted: "#860f23", // oklch(0.4 0.15 20)
+          DEFAULT: "#2e1065", // deep indigo/violet for strong contrast
+          muted: "#6d28d9", // violet-700 for secondary text
         },
-        highlight: "#ffffff", // oklch(1 0.15 20)
+        highlight: "#ffffff",
         border: {
-          DEFAULT: "#ca545a", // oklch(0.6 0.15 20)
-          muted: "#ed7477", // oklch(0.7 0.15 20)
+          DEFAULT: "#c4b5fd", // violet-300
+          muted: "#ddd6fe", // violet-200
         },
-        primary: "#860f23", // oklch(0.4 0.15 20)
-        secondary: "#00555a", // oklch(0.4 0.15 200)
-        danger: "#a8372a", // oklch(0.5 0.15 30)
-        warning: "#746300", // oklch(0.5 0.15 100)
-        success: "#007a46", // oklch(0.5 0.15 160)
-        info: "#2a5fb7", // oklch(0.5 0.15 260)
+        primary: "#c8a2c8", // lilac
+        secondary: "#8b5cf6", // violet-500 accent
+        danger: "#ef4444", // keep standard semantic colors
+        warning: "#f59e0b",
+        success: "#10b981",
+        info: "#3b82f6",
       },
     },
   },
