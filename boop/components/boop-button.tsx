@@ -1,5 +1,5 @@
 import { Pressable, Text, Alert, View, Animated } from "react-native";
-import { useRef, useState } from "react";
+import { useRef, useEffect } from "react";
 import * as Haptics from "expo-haptics";
 import { DeviceService } from "@/lib/deviceService";
 
@@ -12,11 +12,66 @@ export default function BoopButton({ onLongPress }: BoopButtonProps) {
   const shadowAnim = useRef(new Animated.Value(0.3)).current;
   const colorAnim = useRef(new Animated.Value(0)).current;
   const successOpacity = useRef(new Animated.Value(0)).current;
-  const [isPressed, setIsPressed] = useState(false);
+  const breathingAnim = useRef(new Animated.Value(1)).current;
+  const glowAnim = useRef(new Animated.Value(0.3)).current;
+  const rotationAnim = useRef(new Animated.Value(0)).current;
+  const rippleAnim = useRef(new Animated.Value(0)).current;
+
+  // Start breathing animation on mount
+  useEffect(() => {
+    const startBreathing = () => {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(breathingAnim, {
+            toValue: 1.05,
+            duration: 2000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(breathingAnim, {
+            toValue: 1,
+            duration: 2000,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+
+      // Synchronized glow animation
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(glowAnim, {
+            toValue: 0.6,
+            duration: 2000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(glowAnim, {
+            toValue: 0.3,
+            duration: 2000,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+    };
+
+    startBreathing();
+  }, [breathingAnim, glowAnim]);
 
   const handleBoop = async () => {
     // Haptic feedback for press
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    // Ripple effect
+    Animated.sequence([
+      Animated.timing(rippleAnim, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(rippleAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start();
 
     // Success animation - color change
     Animated.sequence([
@@ -66,14 +121,30 @@ export default function BoopButton({ onLongPress }: BoopButtonProps) {
   const handleLongPress = () => {
     // Haptic feedback to indicate settings access
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    // Rotation animation for long press
+    Animated.sequence([
+      Animated.timing(rotationAnim, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(rotationAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
     onLongPress?.();
   };
 
   const handlePressIn = () => {
-    setIsPressed(true);
     Animated.parallel([
       Animated.spring(scaleAnim, {
-        toValue: 0.95,
+        toValue: 0.9,
+        tension: 300,
+        friction: 10,
         useNativeDriver: true,
       }),
       Animated.timing(shadowAnim, {
@@ -85,15 +156,16 @@ export default function BoopButton({ onLongPress }: BoopButtonProps) {
   };
 
   const handlePressOut = () => {
-    setIsPressed(false);
     Animated.parallel([
       Animated.spring(scaleAnim, {
         toValue: 1,
+        tension: 200,
+        friction: 8,
         useNativeDriver: true,
       }),
       Animated.timing(shadowAnim, {
         toValue: 0.3,
-        duration: 150,
+        duration: 200,
         useNativeDriver: true,
       }),
     ]).start();
@@ -104,12 +176,30 @@ export default function BoopButton({ onLongPress }: BoopButtonProps) {
     outputRange: ["#c8a2c8", "#10B981"], // Lilac to green on success
   });
 
+  const rotation = rotationAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["0deg", "15deg"],
+  });
+
+  const rippleScale = rippleAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 1.5],
+  });
+
+  const rippleOpacity = rippleAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.6, 0],
+  });
+
   return (
     <View className="items-center">
       <Animated.View
         style={{
-          transform: [{ scale: scaleAnim }],
-          shadowOpacity: shadowAnim,
+          transform: [
+            { scale: Animated.multiply(scaleAnim, breathingAnim) },
+            { rotate: rotation },
+          ],
+          shadowOpacity: Animated.multiply(shadowAnim, glowAnim),
           shadowColor: "#c8a2c8",
           shadowOffset: {
             width: 0,
@@ -148,6 +238,21 @@ export default function BoopButton({ onLongPress }: BoopButtonProps) {
                 bottom: 0,
                 borderRadius: 80,
                 backgroundColor: "rgba(255, 255, 255, 0.1)",
+              }}
+            />
+
+            {/* Ripple Effect */}
+            <Animated.View
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                borderRadius: 80,
+                backgroundColor: "rgba(255, 255, 255, 0.3)",
+                transform: [{ scale: rippleScale }],
+                opacity: rippleOpacity,
               }}
             />
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,8 @@ import {
   Alert,
   Pressable,
   TextInput,
+  Clipboard,
+  Animated,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { DeviceService } from "@/lib/deviceService";
@@ -29,9 +31,17 @@ export default function SettingsModal({
   const [showPairingModal, setShowPairingModal] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
   const [newName, setNewName] = useState("");
-  const [currentDevice, setCurrentDevice] = useState<{ name: string | null }>({
+  const [currentDevice, setCurrentDevice] = useState<{
+    name: string | null;
+    code: string | null;
+  }>({
     name: null,
+    code: null,
   });
+
+  // Animation refs for copy button
+  const copyButtonScaleAnim = useRef(new Animated.Value(1)).current;
+  const copyButtonTextAnim = useRef(new Animated.Value(0)).current;
 
   // Load paired device when modal opens
   useEffect(() => {
@@ -43,7 +53,48 @@ export default function SettingsModal({
 
   const loadCurrentDevice = () => {
     const deviceInfo = DeviceService.getCurrentDevice();
-    setCurrentDevice({ name: deviceInfo.name });
+    setCurrentDevice({ name: deviceInfo.name, code: deviceInfo.code });
+  };
+
+  const copyCodeToClipboard = async () => {
+    if (!currentDevice.code) return;
+    try {
+      // Button press animation
+      Animated.sequence([
+        Animated.spring(copyButtonScaleAnim, {
+          toValue: 0.95,
+          tension: 300,
+          friction: 10,
+          useNativeDriver: true,
+        }),
+        Animated.spring(copyButtonScaleAnim, {
+          toValue: 1,
+          tension: 300,
+          friction: 10,
+          useNativeDriver: true,
+        }),
+      ]).start();
+
+      // Text morph animation (Copy → ✓)
+      Animated.timing(copyButtonTextAnim, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+
+      Clipboard.setString(currentDevice.code);
+
+      // Reset after 2 seconds
+      setTimeout(() => {
+        Animated.timing(copyButtonTextAnim, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }).start();
+      }, 2000);
+    } catch (error) {
+      console.error("Failed to copy code:", error);
+    }
   };
 
   const loadPairedDevice = async () => {
@@ -159,6 +210,54 @@ export default function SettingsModal({
                 >
                   <Icon name="close" size={20} color="#9CA3AF" />
                 </Pressable>
+              </View>
+
+              {/* Your Code */}
+              <View className="mb-6">
+                <Text className="mb-2 text-sm font-medium text-text-muted">
+                  Your Code
+                </Text>
+                <View className="rounded-lg border border-border bg-bg p-3">
+                  <View className="flex-row items-center justify-between">
+                    <Text className="text-xl font-bold tracking-widest text-text">
+                      {currentDevice.code || "Loading..."}
+                    </Text>
+                    <Animated.View
+                      style={{
+                        transform: [{ scale: copyButtonScaleAnim }],
+                      }}
+                    >
+                      <Pressable
+                        onPress={copyCodeToClipboard}
+                        disabled={!currentDevice.code}
+                        className="rounded-lg bg-primary px-3 py-2"
+                      >
+                        <Animated.Text
+                          className="text-sm font-medium text-white"
+                          style={{
+                            opacity: copyButtonTextAnim.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: [1, 0],
+                            }),
+                          }}
+                        >
+                          Copy
+                        </Animated.Text>
+                        <Animated.Text
+                          className="text-sm font-medium text-white absolute"
+                          style={{
+                            opacity: copyButtonTextAnim,
+                          }}
+                        >
+                          ✓
+                        </Animated.Text>
+                      </Pressable>
+                    </Animated.View>
+                  </View>
+                  <Text className="mt-2 text-xs text-text-muted">
+                    Share this code with your partner to pair devices
+                  </Text>
+                </View>
               </View>
 
               {/* Your Name */}

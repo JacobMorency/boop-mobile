@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { View, Alert, Text } from "react-native";
+import { useState, useEffect, useRef } from "react";
+import { View, Alert, Text, Animated } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import BoopButton from "@/components/boop-button";
 import SettingsModal from "@/components/settings-modal";
@@ -12,6 +12,13 @@ export default function Index() {
   const [isSettingsVisible, setIsSettingsVisible] = useState(false);
   const [pairedDevice, setPairedDevice] = useState<Device | null>(null);
   const [showNameInput, setShowNameInput] = useState(false);
+
+  // Animation refs
+  const connectionSlideAnim = useRef(new Animated.Value(-50)).current;
+  const connectionOpacityAnim = useRef(new Animated.Value(0)).current;
+  const dotPulseAnim = useRef(new Animated.Value(1)).current;
+  const helperTextAnim = useRef(new Animated.Value(0)).current;
+  const helperTextSlideAnim = useRef(new Animated.Value(20)).current;
 
   // Initialize device service and notifications on app start
   useEffect(() => {
@@ -33,10 +40,94 @@ export default function Index() {
   const loadPairedDevice = async () => {
     try {
       const device = await DeviceService.getPairedDevice();
+      const wasPaired = pairedDevice !== null;
+      const isNowPaired = device !== null;
+
       setPairedDevice(device);
+
+      // Animate connection status changes
+      if (isNowPaired && !wasPaired) {
+        // Just connected - slide in with bounce
+        Animated.parallel([
+          Animated.spring(connectionSlideAnim, {
+            toValue: 0,
+            tension: 100,
+            friction: 8,
+            useNativeDriver: true,
+          }),
+          Animated.timing(connectionOpacityAnim, {
+            toValue: 1,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+        ]).start();
+
+        // Start pulsing dot animation
+        startDotPulse();
+      } else if (!isNowPaired && wasPaired) {
+        // Just disconnected - fade out
+        Animated.parallel([
+          Animated.timing(connectionSlideAnim, {
+            toValue: -50,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+          Animated.timing(connectionOpacityAnim, {
+            toValue: 0,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      }
+
+      // Animate helper text
+      if (!isNowPaired) {
+        Animated.parallel([
+          Animated.timing(helperTextAnim, {
+            toValue: 1,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+          Animated.timing(helperTextSlideAnim, {
+            toValue: 0,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      } else {
+        Animated.parallel([
+          Animated.timing(helperTextAnim, {
+            toValue: 0,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+          Animated.timing(helperTextSlideAnim, {
+            toValue: 20,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      }
     } catch (error) {
       console.error("Failed to load paired device:", error);
     }
+  };
+
+  const startDotPulse = () => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(dotPulseAnim, {
+          toValue: 1.3,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(dotPulseAnim, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
   };
 
   const setupNotifications = () => {
@@ -71,21 +162,43 @@ export default function Index() {
 
   return (
     <SafeAreaView className="flex-1 bg-bg">
-      {/* Connection Status - Subtle indicator */}
-      {pairedDevice && (
-        <View className="absolute top-12 left-6 z-10">
-          <View className="flex-row items-center rounded-full px-2 py-1">
-            <View className="w-2 h-2 rounded-full bg-green-500 mr-2"></View>
-            <Text className="text-xs font-medium text-text-muted">
-              {pairedDevice.code}
-            </Text>
-          </View>
+      {/* Connection Status - Animated indicator */}
+      <Animated.View
+        className="absolute top-12 left-6 z-10"
+        style={{
+          opacity: connectionOpacityAnim,
+          transform: [{ translateY: connectionSlideAnim }],
+        }}
+      >
+        <View className="flex-row items-center rounded-full px-2 py-1">
+          <Animated.View
+            className="w-2 h-2 rounded-full bg-green-500 mr-2"
+            style={{
+              transform: [{ scale: dotPulseAnim }],
+            }}
+          />
+          <Text className="text-xs font-medium text-text-muted">
+            {pairedDevice?.code}
+          </Text>
         </View>
-      )}
+      </Animated.View>
 
       {/* Main Content - Centered Boop Button */}
       <View className="flex-1 items-center justify-center">
         <BoopButton onLongPress={() => setIsSettingsVisible(true)} />
+
+        {/* Helper text when not paired - Animated */}
+        <Animated.View
+          className="mt-8 px-8"
+          style={{
+            opacity: helperTextAnim,
+            transform: [{ translateY: helperTextSlideAnim }],
+          }}
+        >
+          <Text className="text-center text-sm text-text-muted">
+            Long press the button to open settings and pair with a partner
+          </Text>
+        </Animated.View>
       </View>
 
       <SettingsModal

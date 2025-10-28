@@ -1,5 +1,15 @@
-import { useState } from "react";
-import { View, Text, Modal, Button, TextInput, Alert } from "react-native";
+import { useState, useEffect, useRef } from "react";
+import {
+  View,
+  Text,
+  Modal,
+  Button,
+  TextInput,
+  Alert,
+  Pressable,
+  Clipboard,
+  Animated,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { DeviceService } from "@/lib/deviceService";
 
@@ -14,6 +24,192 @@ export default function NameInputModal({
 }: NameInputModalProps) {
   const [name, setName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [deviceCode, setDeviceCode] = useState<string>("");
+
+  // Animation refs
+  const backdropAnim = useRef(new Animated.Value(0)).current;
+  const modalScaleAnim = useRef(new Animated.Value(0.9)).current;
+  const modalOpacityAnim = useRef(new Animated.Value(0)).current;
+  const titleSlideAnim = useRef(new Animated.Value(-30)).current;
+  const titleOpacityAnim = useRef(new Animated.Value(0)).current;
+  const descriptionOpacityAnim = useRef(new Animated.Value(0)).current;
+  const codeScaleAnim = useRef(new Animated.Value(0.8)).current;
+  const codeOpacityAnim = useRef(new Animated.Value(0)).current;
+  const inputSlideAnim = useRef(new Animated.Value(30)).current;
+  const inputOpacityAnim = useRef(new Animated.Value(0)).current;
+  const buttonOpacityAnim = useRef(new Animated.Value(0)).current;
+  const copyButtonScaleAnim = useRef(new Animated.Value(1)).current;
+  const copyButtonTextAnim = useRef(new Animated.Value(0)).current;
+
+  // Generate device code when modal opens
+  useEffect(() => {
+    if (visible) {
+      generateDeviceCode();
+      startEntranceAnimation();
+    } else {
+      resetAnimations();
+    }
+  }, [visible]);
+
+  const startEntranceAnimation = () => {
+    // Reset all animations
+    resetAnimations();
+
+    // Backdrop fade in
+    Animated.timing(backdropAnim, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+
+    // Modal container scale + fade
+    Animated.parallel([
+      Animated.spring(modalScaleAnim, {
+        toValue: 1,
+        tension: 100,
+        friction: 8,
+        useNativeDriver: true,
+      }),
+      Animated.timing(modalOpacityAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    // Staggered content animations
+    setTimeout(() => {
+      // Title slide in
+      Animated.parallel([
+        Animated.spring(titleSlideAnim, {
+          toValue: 0,
+          tension: 100,
+          friction: 8,
+          useNativeDriver: true,
+        }),
+        Animated.timing(titleOpacityAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }, 100);
+
+    setTimeout(() => {
+      // Description fade in
+      Animated.timing(descriptionOpacityAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    }, 200);
+
+    setTimeout(() => {
+      // Code box scale in with bounce
+      Animated.parallel([
+        Animated.spring(codeScaleAnim, {
+          toValue: 1,
+          tension: 100,
+          friction: 8,
+          useNativeDriver: true,
+        }),
+        Animated.timing(codeOpacityAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }, 300);
+
+    setTimeout(() => {
+      // Input slide up
+      Animated.parallel([
+        Animated.spring(inputSlideAnim, {
+          toValue: 0,
+          tension: 100,
+          friction: 8,
+          useNativeDriver: true,
+        }),
+        Animated.timing(inputOpacityAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }, 400);
+
+    setTimeout(() => {
+      // Button fade in
+      Animated.timing(buttonOpacityAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    }, 500);
+  };
+
+  const resetAnimations = () => {
+    backdropAnim.setValue(0);
+    modalScaleAnim.setValue(0.9);
+    modalOpacityAnim.setValue(0);
+    titleSlideAnim.setValue(-30);
+    titleOpacityAnim.setValue(0);
+    descriptionOpacityAnim.setValue(0);
+    codeScaleAnim.setValue(0.8);
+    codeOpacityAnim.setValue(0);
+    inputSlideAnim.setValue(30);
+    inputOpacityAnim.setValue(0);
+    buttonOpacityAnim.setValue(0);
+  };
+
+  const generateDeviceCode = async () => {
+    try {
+      const { code } = await DeviceService.registerDevice();
+      setDeviceCode(code);
+    } catch (error) {
+      console.error("Failed to generate device code:", error);
+    }
+  };
+
+  const copyCodeToClipboard = async () => {
+    try {
+      // Button press animation
+      Animated.sequence([
+        Animated.spring(copyButtonScaleAnim, {
+          toValue: 0.95,
+          tension: 300,
+          friction: 10,
+          useNativeDriver: true,
+        }),
+        Animated.spring(copyButtonScaleAnim, {
+          toValue: 1,
+          tension: 300,
+          friction: 10,
+          useNativeDriver: true,
+        }),
+      ]).start();
+
+      // Text morph animation (Copy → ✓)
+      Animated.timing(copyButtonTextAnim, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+
+      Clipboard.setString(deviceCode);
+
+      // Reset after 2 seconds
+      setTimeout(() => {
+        Animated.timing(copyButtonTextAnim, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }).start();
+      }, 2000);
+    } catch (error) {
+      console.error("Failed to copy code:", error);
+    }
+  };
 
   const handleSubmit = async () => {
     if (!name.trim()) {
@@ -23,8 +219,8 @@ export default function NameInputModal({
 
     setIsLoading(true);
     try {
-      // Register device with the provided name
-      await DeviceService.registerDevice(name.trim());
+      // Update device name
+      await DeviceService.updateDeviceName(name.trim());
       onComplete(name.trim());
     } catch (error) {
       Alert.alert("Error", "Failed to set up your profile");
@@ -42,19 +238,110 @@ export default function NameInputModal({
       onRequestClose={() => {}} // Prevent closing without name
     >
       <SafeAreaView className="flex-1">
-        <View className="flex-1 items-center justify-center bg-black/50 p-4">
-          <View className="w-11/12 rounded-2xl bg-bg-light p-6">
-            <Text className="mb-2 text-2xl font-bold text-text">
-              Welcome to Boop! 👋
-            </Text>
-            <Text className="mb-6 text-base text-text-muted">
-              What should we call you? This name will appear in notifications
-              when you boop someone.
-            </Text>
+        <Animated.View
+          className="flex-1 items-center justify-center p-4"
+          style={{
+            backgroundColor: `rgba(0, 0, 0, ${backdropAnim.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0, 0.5],
+            })})`,
+          }}
+        >
+          <Animated.View
+            className="w-11/12 rounded-2xl bg-bg-light p-6"
+            style={{
+              opacity: modalOpacityAnim,
+              transform: [{ scale: modalScaleAnim }],
+            }}
+          >
+            <Animated.View
+              style={{
+                opacity: titleOpacityAnim,
+                transform: [{ translateY: titleSlideAnim }],
+              }}
+            >
+              <Text className="mb-2 text-2xl font-bold text-text">
+                Welcome to Boop! 👋
+              </Text>
+            </Animated.View>
 
-            <View className="mb-6">
+            <Animated.View
+              style={{
+                opacity: descriptionOpacityAnim,
+              }}
+            >
+              <Text className="mb-4 text-base text-text-muted">
+                Boop lets you send quick "thinking of you" notifications to a
+                special person. Pair your devices and tap the button to send a
+                boop!
+              </Text>
+            </Animated.View>
+
+            {/* Your Pairing Code */}
+            {deviceCode && (
+              <Animated.View
+                className="mb-6 rounded-lg border border-border bg-bg p-4"
+                style={{
+                  opacity: codeOpacityAnim,
+                  transform: [{ scale: codeScaleAnim }],
+                }}
+              >
+                <Text className="mb-2 text-sm font-medium text-text-muted">
+                  Your pairing code
+                </Text>
+                <View className="flex-row items-center justify-between">
+                  <Text className="text-2xl font-bold tracking-widest text-text">
+                    {deviceCode}
+                  </Text>
+                  <Animated.View
+                    style={{
+                      transform: [{ scale: copyButtonScaleAnim }],
+                    }}
+                  >
+                    <Pressable
+                      onPress={copyCodeToClipboard}
+                      className="rounded-lg bg-primary px-3 py-2"
+                    >
+                      <Animated.Text
+                        className="text-sm font-medium text-white"
+                        style={{
+                          opacity: copyButtonTextAnim.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [1, 0],
+                          }),
+                        }}
+                      >
+                        Copy
+                      </Animated.Text>
+                      <Animated.Text
+                        className="text-sm font-medium text-white absolute"
+                        style={{
+                          opacity: copyButtonTextAnim,
+                        }}
+                      >
+                        ✓
+                      </Animated.Text>
+                    </Pressable>
+                  </Animated.View>
+                </View>
+                <Text className="mt-2 text-xs text-text-muted">
+                  Share this code with your partner to connect your devices
+                </Text>
+              </Animated.View>
+            )}
+
+            <Animated.View
+              className="mb-6"
+              style={{
+                opacity: inputOpacityAnim,
+                transform: [{ translateY: inputSlideAnim }],
+              }}
+            >
               <Text className="mb-2 text-sm font-medium text-text-muted">
-                Your name
+                What should we call you?
+              </Text>
+              <Text className="mb-3 text-xs text-text-muted">
+                This name will appear in notifications when you boop someone
               </Text>
               <TextInput
                 value={name}
@@ -68,15 +355,21 @@ export default function NameInputModal({
                 onSubmitEditing={handleSubmit}
                 returnKeyType="done"
               />
-            </View>
+            </Animated.View>
 
-            <Button
-              title={isLoading ? "Setting up..." : "Continue"}
-              onPress={handleSubmit}
-              disabled={!name.trim() || isLoading}
-            />
-          </View>
-        </View>
+            <Animated.View
+              style={{
+                opacity: buttonOpacityAnim,
+              }}
+            >
+              <Button
+                title={isLoading ? "Setting up..." : "Continue"}
+                onPress={handleSubmit}
+                disabled={!name.trim() || isLoading}
+              />
+            </Animated.View>
+          </Animated.View>
+        </Animated.View>
       </SafeAreaView>
     </Modal>
   );
