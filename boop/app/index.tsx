@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { View, Alert, Text, Animated } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import * as Haptics from "expo-haptics";
 import BoopButton from "@/components/boop-button";
 import SettingsModal from "@/components/settings-modal";
 import NameInputModal from "@/components/name-input-modal";
@@ -19,6 +20,8 @@ export default function Index() {
   const dotPulseAnim = useRef(new Animated.Value(1)).current;
   const helperTextAnim = useRef(new Animated.Value(0)).current;
   const helperTextSlideAnim = useRef(new Animated.Value(20)).current;
+  const boopButtonPulseAnim = useRef(new Animated.Value(1)).current;
+  const boopButtonGlowAnim = useRef(new Animated.Value(0)).current;
 
   // Initialize device service and notifications on app start
   useEffect(() => {
@@ -130,13 +133,50 @@ export default function Index() {
     ).start();
   };
 
+  const triggerBoopReceptionAnimation = () => {
+    // Haptic feedback
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+    // Pulse animation - scale up and down
+    Animated.sequence([
+      Animated.parallel([
+        Animated.spring(boopButtonPulseAnim, {
+          toValue: 1.15,
+          tension: 200,
+          friction: 5,
+          useNativeDriver: true,
+        }),
+        Animated.timing(boopButtonGlowAnim, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]),
+      Animated.parallel([
+        Animated.spring(boopButtonPulseAnim, {
+          toValue: 1,
+          tension: 200,
+          friction: 5,
+          useNativeDriver: true,
+        }),
+        Animated.timing(boopButtonGlowAnim, {
+          toValue: 0,
+          duration: 400,
+          useNativeDriver: true,
+        }),
+      ]),
+    ]).start();
+  };
+
   const setupNotifications = () => {
     // Listen for notifications when app is in foreground
     const notificationListener =
       PushNotificationService.addNotificationReceivedListener(
         (notification) => {
           console.log("Notification received:", notification);
-          // You can show a custom alert or update UI here
+          // Trigger animation and haptic feedback
+          triggerBoopReceptionAnimation();
+          // Show alert as well
           Alert.alert(
             notification.request.content.title || "Boop!",
             notification.request.content.body || "You received a boop!"
@@ -178,14 +218,30 @@ export default function Index() {
             }}
           />
           <Text className="text-xs font-medium text-text-muted">
-            {pairedDevice?.code}
+            {pairedDevice?.name || pairedDevice?.code}
           </Text>
         </View>
       </Animated.View>
 
       {/* Main Content - Centered Boop Button */}
       <View className="flex-1 items-center justify-center">
-        <BoopButton onLongPress={() => setIsSettingsVisible(true)} />
+        <Animated.View
+          style={{
+            transform: [{ scale: boopButtonPulseAnim }],
+            shadowOpacity: boopButtonGlowAnim.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0, 0.8],
+            }),
+            shadowColor: "#c8a2c8",
+            shadowOffset: {
+              width: 0,
+              height: 0,
+            },
+            shadowRadius: 30,
+          }}
+        >
+          <BoopButton onLongPress={() => setIsSettingsVisible(true)} />
+        </Animated.View>
 
         {/* Helper text when not paired - Animated */}
         <Animated.View

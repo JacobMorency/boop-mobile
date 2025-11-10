@@ -3,7 +3,6 @@ import {
   View,
   Text,
   Modal,
-  Button,
   TextInput,
   Alert,
   Pressable,
@@ -12,6 +11,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { DeviceService } from "@/lib/deviceService";
+import Button from "@/components/ui/button";
+import Icon from "@/components/ui/icon";
 
 export type NameInputModalProps = {
   visible: boolean;
@@ -300,27 +301,33 @@ export default function NameInputModal({
                   >
                     <Pressable
                       onPress={copyCodeToClipboard}
-                      className="rounded-lg bg-primary px-3 py-2"
+                      className="rounded-lg p-2 items-center justify-center"
+                      style={({ pressed }) => ({
+                        opacity: pressed ? 0.6 : 1,
+                        width: 36,
+                        height: 36,
+                      })}
                     >
-                      <Animated.Text
-                        className="text-sm font-medium text-white"
-                        style={{
-                          opacity: copyButtonTextAnim.interpolate({
-                            inputRange: [0, 1],
-                            outputRange: [1, 0],
-                          }),
-                        }}
-                      >
-                        Copy
-                      </Animated.Text>
-                      <Animated.Text
-                        className="text-sm font-medium text-white absolute"
-                        style={{
-                          opacity: copyButtonTextAnim,
-                        }}
-                      >
-                        ✓
-                      </Animated.Text>
+                      <View className="absolute items-center justify-center" style={{ width: 20, height: 20 }}>
+                        <Animated.View
+                          style={{
+                            opacity: copyButtonTextAnim.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: [1, 0],
+                            }),
+                          }}
+                        >
+                          <Icon name="copy" size={20} color="#6d28d9" />
+                        </Animated.View>
+                        <Animated.View
+                          className="absolute"
+                          style={{
+                            opacity: copyButtonTextAnim,
+                          }}
+                        >
+                          <Icon name="check" size={20} color="#10b981" />
+                        </Animated.View>
+                      </View>
                     </Pressable>
                   </Animated.View>
                 </View>
@@ -366,6 +373,7 @@ export default function NameInputModal({
                 title={isLoading ? "Setting up..." : "Continue"}
                 onPress={handleSubmit}
                 disabled={!name.trim() || isLoading}
+                loading={isLoading}
               />
             </Animated.View>
           </Animated.View>

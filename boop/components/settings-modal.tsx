@@ -3,7 +3,6 @@ import {
   View,
   Text,
   Modal,
-  Button,
   Alert,
   Pressable,
   TextInput,
@@ -15,6 +14,7 @@ import { DeviceService } from "@/lib/deviceService";
 import { Device } from "@/lib/supabase";
 import PairingModal from "./pairing-modal";
 import Icon from "./ui/icon";
+import Button from "./ui/button";
 
 export type SettingsModalProps = {
   visible: boolean;
@@ -230,34 +230,44 @@ export default function SettingsModal({
                       <Pressable
                         onPress={copyCodeToClipboard}
                         disabled={!currentDevice.code}
-                        className="rounded-lg bg-primary px-3 py-2"
+                        className="rounded-lg p-2 items-center justify-center"
+                        style={({ pressed }) => ({
+                          opacity: pressed ? 0.6 : 1,
+                          width: 36,
+                          height: 36,
+                        })}
                       >
-                        <Animated.Text
-                          className="text-sm font-medium text-white"
-                          style={{
-                            opacity: copyButtonTextAnim.interpolate({
-                              inputRange: [0, 1],
-                              outputRange: [1, 0],
-                            }),
-                          }}
-                        >
-                          Copy
-                        </Animated.Text>
-                        <Animated.Text
-                          className="text-sm font-medium text-white absolute"
-                          style={{
-                            opacity: copyButtonTextAnim,
-                          }}
-                        >
-                          ✓
-                        </Animated.Text>
+                        <View className="absolute items-center justify-center" style={{ width: 20, height: 20 }}>
+                          <Animated.View
+                            style={{
+                              opacity: copyButtonTextAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [1, 0],
+                              }),
+                            }}
+                          >
+                            <Icon
+                              name="copy"
+                              size={20}
+                              color={currentDevice.code ? "#6d28d9" : "#9CA3AF"}
+                            />
+                          </Animated.View>
+                          <Animated.View
+                            className="absolute"
+                            style={{
+                              opacity: copyButtonTextAnim,
+                            }}
+                          >
+                            <Icon name="check" size={20} color="#10b981" />
+                          </Animated.View>
+                        </View>
                       </Pressable>
                     </Animated.View>
                   </View>
-                  <Text className="mt-2 text-xs text-text-muted">
-                    Share this code with your partner to pair devices
-                  </Text>
                 </View>
+                <Text className="mt-2 text-xs text-text-muted">
+                  Share this code with your partner to pair devices
+                </Text>
               </View>
 
               {/* Your Name */}
@@ -266,7 +276,7 @@ export default function SettingsModal({
                   Your Name
                 </Text>
                 {isEditingName ? (
-                  <View className="space-y-3">
+                  <View>
                     <TextInput
                       value={newName}
                       onChangeText={setNewName}
@@ -277,7 +287,7 @@ export default function SettingsModal({
                       className="rounded-lg border border-border bg-bg px-3 py-2 text-base text-text"
                       maxLength={50}
                     />
-                    <View className="flex-row gap-2">
+                    <View className="flex-row mt-3" style={{ gap: 8 }}>
                       <Button
                         title="Save"
                         onPress={handleSaveName}
@@ -286,6 +296,7 @@ export default function SettingsModal({
                       <Button
                         title="Cancel"
                         onPress={handleCancelEdit}
+                        variant="secondary"
                         className="flex-1"
                       />
                     </View>
@@ -295,7 +306,15 @@ export default function SettingsModal({
                     <Text className="text-base text-text">
                       {currentDevice.name || "Not set"}
                     </Text>
-                    <Button title="Edit" onPress={handleEditName} />
+                    <Pressable
+                      onPress={handleEditName}
+                      className="p-2"
+                      style={({ pressed }) => ({
+                        opacity: pressed ? 0.6 : 1,
+                      })}
+                    >
+                      <Icon name="edit" size={20} color="#6d28d9" />
+                    </Pressable>
                   </View>
                 )}
               </View>
@@ -330,7 +349,7 @@ export default function SettingsModal({
               </View>
 
               {/* Action Buttons */}
-              <View className="space-y-3">
+              <View>
                 {pairedDevice ? (
                   <Button
                     title={
@@ -340,14 +359,22 @@ export default function SettingsModal({
                     }
                     onPress={handleDisconnect}
                     disabled={isDisconnecting}
+                    loading={isDisconnecting}
+                    className="mb-3"
                   />
                 ) : (
-                  <Button title="Pair with Partner" onPress={handlePairNew} />
+                  <Button
+                    title="Pair with Partner"
+                    onPress={handlePairNew}
+                    className="mb-3"
+                  />
                 )}
 
-                <View className="mr-2">
-                  <Button title="Close" onPress={onClose} />
-                </View>
+                <Button
+                  title="Close"
+                  onPress={onClose}
+                  variant="secondary"
+                />
               </View>
             </View>
           </View>

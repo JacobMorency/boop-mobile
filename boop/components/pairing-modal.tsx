@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
-import { View, Text, Modal, Button, TextInput, Alert } from "react-native";
+import { useState, useEffect, useRef } from "react";
+import { View, Text, Modal, TextInput, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { DeviceService } from "@/lib/deviceService";
+import Button from "@/components/ui/button";
 
 export type PairingModalProps = {
   visible: boolean;
@@ -12,13 +13,38 @@ export default function PairingModal({ visible, onClose }: PairingModalProps) {
   const [myCode, setMyCode] = useState<string>("");
   const [otherCode, setOtherCode] = useState("");
   const [isConnecting, setIsConnecting] = useState(false);
+  const [isCodeValid, setIsCodeValid] = useState(true);
+  const inputRef = useRef<TextInput>(null);
 
   // Get device code when modal opens
   useEffect(() => {
     if (visible) {
       loadDeviceCode();
+      // Auto-focus input after a short delay
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 300);
+    } else {
+      // Reset state when modal closes
+      setOtherCode("");
+      setIsCodeValid(true);
     }
   }, [visible]);
+
+  // Validate pairing code format
+  const validateCode = (code: string): boolean => {
+    if (code.length === 0) return true; // Empty is valid (not yet entered)
+    // 6 characters, alphanumeric only (no ambiguous characters)
+    const codeRegex = /^[A-Z0-9]{0,6}$/;
+    return codeRegex.test(code);
+  };
+
+  const handleCodeChange = (text: string) => {
+    // Auto-uppercase
+    const upperText = text.toUpperCase();
+    setOtherCode(upperText);
+    setIsCodeValid(validateCode(upperText));
+  };
 
   const loadDeviceCode = async () => {
     try {
@@ -86,23 +112,37 @@ export default function PairingModal({ visible, onClose }: PairingModalProps) {
                 Enter partner code
               </Text>
               <TextInput
+                ref={inputRef}
                 value={otherCode}
-                onChangeText={setOtherCode}
+                onChangeText={handleCodeChange}
                 placeholder="XXXXXX"
                 placeholderTextColor="#9CA3AF"
                 autoCapitalize="characters"
                 autoCorrect={false}
-                className="rounded-lg border border-border-muted bg-bg px-3 py-2 text-base text-text-muted"
+                maxLength={6}
+                className={`rounded-lg border bg-bg px-3 py-2 text-base text-text ${
+                  isCodeValid ? "border-border-muted" : "border-danger"
+                }`}
               />
+              {!isCodeValid && otherCode.length > 0 && (
+                <Text className="mt-1 text-xs text-danger">
+                  Code must be 6 alphanumeric characters
+                </Text>
+              )}
             </View>
-            <View className="flex-row justify-end gap-3">
-              <View className="mr-2">
-                <Button title="Cancel" onPress={onClose} />
-              </View>
+            <View className="flex-row" style={{ gap: 12 }}>
+              <Button
+                title="Cancel"
+                onPress={onClose}
+                variant="secondary"
+                className="flex-1"
+              />
               <Button
                 title={isConnecting ? "Connecting..." : "Connect"}
                 onPress={handleConnect}
-                disabled={!otherCode || isConnecting}
+                disabled={!otherCode.trim() || isConnecting || !isCodeValid}
+                loading={isConnecting}
+                className="flex-1"
               />
             </View>
           </View>
