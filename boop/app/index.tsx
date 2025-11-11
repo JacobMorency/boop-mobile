@@ -5,6 +5,7 @@ import * as Haptics from "expo-haptics";
 import BoopButton from "@/components/boop-button";
 import SettingsModal from "@/components/settings-modal";
 import NameInputModal from "@/components/name-input-modal";
+import Toast from "@/components/ui/toast";
 import { DeviceService } from "@/lib/deviceService";
 import { PushNotificationService } from "@/lib/pushNotificationService";
 import { ThemeService } from "@/lib/themeService";
@@ -16,6 +17,9 @@ export default function Index() {
   const [isSettingsVisible, setIsSettingsVisible] = useState(false);
   const [pairedDevice, setPairedDevice] = useState<Device | null>(null);
   const [showNameInput, setShowNameInput] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
+  const [toastType, setToastType] = useState<"error" | "success" | "info">("error");
+  const [showToast, setShowToast] = useState(false);
 
   // Animation refs
   const connectionSlideAnim = useRef(new Animated.Value(-50)).current;
@@ -172,6 +176,12 @@ export default function Index() {
     ]).start();
   };
 
+  const showToastMessage = (message: string, type: "error" | "success" | "info" = "error") => {
+    setToastMessage(message);
+    setToastType(type);
+    setShowToast(true);
+  };
+
   const setupNotifications = () => {
     // Listen for notifications when app is in foreground
     const notificationListener =
@@ -180,10 +190,10 @@ export default function Index() {
           console.log("Notification received:", notification);
           // Trigger animation and haptic feedback
           triggerBoopReceptionAnimation();
-          // Show alert as well
-          Alert.alert(
-            notification.request.content.title || "Boop!",
-            notification.request.content.body || "You received a boop!"
+          // Show toast notification
+          showToastMessage(
+            notification.request.content.body || "You received a boop!",
+            "info"
           );
         }
       );
@@ -209,6 +219,12 @@ export default function Index() {
       className="flex-1"
       style={{ backgroundColor: theme.colors.bg.DEFAULT }}
     >
+      <Toast
+        message={toastMessage}
+        type={toastType}
+        visible={showToast}
+        onHide={() => setShowToast(false)}
+      />
       {/* Connection Status - Animated indicator */}
       <Animated.View
         className="absolute top-12 left-6 z-10"
@@ -254,7 +270,10 @@ export default function Index() {
             shadowRadius: 30,
           }}
         >
-          <BoopButton onLongPress={() => setIsSettingsVisible(true)} />
+          <BoopButton 
+            onLongPress={() => setIsSettingsVisible(true)}
+            onError={(message) => showToastMessage(message, "error")}
+          />
         </Animated.View>
 
         {/* Helper text when not paired - Animated */}

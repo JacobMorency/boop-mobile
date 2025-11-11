@@ -17,6 +17,7 @@ import { useTheme } from "@/lib/themeContext";
 import PairingModal from "./pairing-modal";
 import Icon from "./ui/icon";
 import Button from "./ui/button";
+import Toast from "./ui/toast";
 
 export type SettingsModalProps = {
   visible: boolean;
@@ -44,6 +45,9 @@ export default function SettingsModal({
     name: null,
     code: null,
   });
+  const [toastMessage, setToastMessage] = useState("");
+  const [toastType, setToastType] = useState<"error" | "success" | "info">("error");
+  const [showToast, setShowToast] = useState(false);
 
   // Animation refs for copy button
   const copyButtonScaleAnim = useRef(new Animated.Value(1)).current;
@@ -133,18 +137,24 @@ export default function SettingsModal({
     );
   };
 
+  const showToastMessage = (message: string, type: "error" | "success" | "info" = "error") => {
+    setToastMessage(message);
+    setToastType(type);
+    setShowToast(true);
+  };
+
   const confirmDisconnect = async () => {
     setIsDisconnecting(true);
     try {
       const success = await DeviceService.disconnectFromPartner();
       if (success) {
         setPairedDevice(null);
-        Alert.alert("Success", "Disconnected from partner successfully!");
+        showToastMessage("Disconnected from partner successfully!", "success");
       } else {
-        Alert.alert("Error", "Failed to disconnect from partner.");
+        showToastMessage("Failed to disconnect from partner.", "error");
       }
     } catch (error) {
-      Alert.alert("Error", "Failed to disconnect from partner.");
+      showToastMessage("Failed to disconnect from partner.", "error");
       console.error(error);
     } finally {
       setIsDisconnecting(false);
@@ -176,21 +186,22 @@ export default function SettingsModal({
 
   const handleSaveName = async () => {
     if (!newName.trim()) {
-      Alert.alert("Error", "Please enter a name");
+      showToastMessage("Please enter a name", "error");
       return;
     }
 
     try {
       const success = await DeviceService.updateDeviceName(newName.trim());
       if (success) {
-        setCurrentDevice({ name: newName.trim() });
+        // Reload device info to ensure we have the latest data including code
+        loadCurrentDevice();
         setIsEditingName(false);
-        Alert.alert("Success", "Name updated successfully!");
+        showToastMessage("Name updated successfully!", "success");
       } else {
-        Alert.alert("Error", "Failed to update name");
+        showToastMessage("Failed to update name", "error");
       }
     } catch (error) {
-      Alert.alert("Error", "Failed to update name");
+      showToastMessage("Failed to update name", "error");
       console.error(error);
     }
   };
@@ -209,6 +220,12 @@ export default function SettingsModal({
         onRequestClose={onClose}
       >
         <SafeAreaView className="flex-1">
+          <Toast
+            message={toastMessage}
+            type={toastType}
+            visible={showToast}
+            onHide={() => setShowToast(false)}
+          />
           <View 
             className="flex-1 items-center justify-center p-4"
             style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}

@@ -1,4 +1,4 @@
-import { Pressable, Text, Alert, View, Animated } from "react-native";
+import { Pressable, Text, View, Animated } from "react-native";
 import { useRef, useEffect, useMemo } from "react";
 import * as Haptics from "expo-haptics";
 import { DeviceService } from "@/lib/deviceService";
@@ -6,9 +6,10 @@ import { useTheme } from "@/lib/themeContext";
 
 export type BoopButtonProps = {
   onLongPress?: () => void;
+  onError?: (message: string) => void;
 };
 
-export default function BoopButton({ onLongPress }: BoopButtonProps) {
+export default function BoopButton({ onLongPress, onError }: BoopButtonProps) {
   const { theme } = useTheme();
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const shadowAnim = useRef(new Animated.Value(0.3)).current;
@@ -110,13 +111,10 @@ export default function BoopButton({ onLongPress }: BoopButtonProps) {
         ]).start();
       } else {
         // Show error message (rate limit or other error)
-        Alert.alert(
-          "Error",
-          result.error || "Failed to send boop"
-        );
+        onError?.(result.error || "Failed to send boop");
       }
     } catch (error) {
-      Alert.alert("Error", "Failed to send boop");
+      onError?.("Failed to send boop");
       console.error(error);
     }
   };

@@ -4,7 +4,6 @@ import {
   Text,
   Modal,
   TextInput,
-  Alert,
   Pressable,
   Clipboard,
   Animated,
@@ -14,6 +13,7 @@ import { DeviceService } from "@/lib/deviceService";
 import { useTheme } from "@/lib/themeContext";
 import Button from "@/components/ui/button";
 import Icon from "@/components/ui/icon";
+import Toast from "@/components/ui/toast";
 
 export type NameInputModalProps = {
   visible: boolean;
@@ -28,6 +28,9 @@ export default function NameInputModal({
   const [name, setName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [deviceCode, setDeviceCode] = useState<string>("");
+  const [toastMessage, setToastMessage] = useState("");
+  const [toastType, setToastType] = useState<"error" | "success" | "info">("error");
+  const [showToast, setShowToast] = useState(false);
 
   // Animation refs
   const backdropAnim = useRef(new Animated.Value(0)).current;
@@ -214,9 +217,15 @@ export default function NameInputModal({
     }
   };
 
+  const showToastMessage = (message: string, type: "error" | "success" | "info" = "error") => {
+    setToastMessage(message);
+    setToastType(type);
+    setShowToast(true);
+  };
+
   const handleSubmit = async () => {
     if (!name.trim()) {
-      Alert.alert("Error", "Please enter your name");
+      showToastMessage("Please enter your name", "error");
       return;
     }
 
@@ -226,7 +235,7 @@ export default function NameInputModal({
       await DeviceService.updateDeviceName(name.trim());
       onComplete(name.trim());
     } catch (error) {
-      Alert.alert("Error", "Failed to set up your profile");
+      showToastMessage("Failed to set up your profile", "error");
       console.error(error);
     } finally {
       setIsLoading(false);
@@ -241,6 +250,12 @@ export default function NameInputModal({
       onRequestClose={() => {}} // Prevent closing without name
     >
       <SafeAreaView className="flex-1">
+        <Toast
+          message={toastMessage}
+          type={toastType}
+          visible={showToast}
+          onHide={() => setShowToast(false)}
+        />
         <Animated.View
           className="flex-1 items-center justify-center p-4"
           style={{

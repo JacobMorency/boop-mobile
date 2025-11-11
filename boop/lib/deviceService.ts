@@ -42,21 +42,69 @@ export class DeviceService {
       const expoPushToken =
         await PushNotificationService.registerForPushNotifications();
 
+      // Try to insert with name first, fallback to without name if column doesn't exist
+      let insertData: any = {
+        expo_push_token: expoPushToken,
+        platform: Platform.OS as "ios" | "android" | "web",
+      };
+      
+      // Only include name if we have a value (will fail gracefully if column doesn't exist)
+      if (name) {
+        insertData.name = name;
+      }
+
       const { data, error } = await supabase
         .from("devices")
-        .insert({
-          name: name || "Anonymous",
-          expo_push_token: expoPushToken,
-          platform: Platform.OS as "ios" | "android" | "web",
-        })
+        .insert(insertData)
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        // If error is about missing name column, try again without name
+        const errorMessage = error.message || String(error);
+        if (errorMessage.includes("name") && errorMessage.includes("column") && name) {
+          console.warn(
+            "Database schema missing 'name' column. Inserting without name. Please run: add-name-migration.sql"
+          );
+          // Retry without name
+          const { data: retryData, error: retryError } = await supabase
+            .from("devices")
+            .insert({
+              expo_push_token: expoPushToken,
+              platform: Platform.OS as "ios" | "android" | "web",
+            })
+            .select()
+            .single();
+          
+          if (retryError) throw retryError;
+          
+          // Use retryData and set name locally
+          this.deviceId = retryData.id;
+          this.deviceCode = retryData.code;
+          this.deviceName = name || "Anonymous";
+          
+          await AsyncStorage.setItem(
+            this.STORAGE_KEY,
+            JSON.stringify({
+              deviceId: this.deviceId,
+              code: this.deviceCode,
+              name: this.deviceName,
+            })
+          );
+          
+          return {
+            deviceId: this.deviceId,
+            code: this.deviceCode,
+            name: this.deviceName,
+          };
+        }
+        throw error;
+      }
 
       this.deviceId = data.id;
       this.deviceCode = data.code;
-      this.deviceName = data.name;
+      // Handle case where name column might not exist (graceful fallback)
+      this.deviceName = data.name || name || "Anonymous";
 
       // Store device info locally
       await AsyncStorage.setItem(
@@ -64,17 +112,33 @@ export class DeviceService {
         JSON.stringify({
           deviceId: data.id,
           code: data.code,
-          name: data.name,
+          name: this.deviceName,
         })
       );
 
       return {
         deviceId: data.id,
         code: data.code,
-        name: data.name,
+        name: this.deviceName,
       };
     } catch (error) {
       console.error("Failed to register device:", error);
+      // Check if it's a schema error (missing name column)
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes("name") && errorMessage.includes("column")) {
+        console.warn(
+          "Database schema missing 'name' column. Please run the migration: add-name-migration.sql"
+        );
+        // Try to continue without name if we have deviceId and code
+        if (this.deviceId && this.deviceCode) {
+          this.deviceName = name || "Anonymous";
+          return {
+            deviceId: this.deviceId,
+            code: this.deviceCode,
+            name: this.deviceName,
+          };
+        }
+      }
       throw error;
     }
   }
@@ -102,7 +166,29 @@ export class DeviceService {
         .update({ name })
         .eq("id", this.deviceId);
 
-      if (error) throw error;
+      if (error) {
+        // Check if it's a schema error (missing name column)
+        const errorMessage = error.message || String(error);
+        if (errorMessage.includes("name") && errorMessage.includes("column")) {
+          console.warn(
+            "Database schema missing 'name' column. Please run the migration: add-name-migration.sql"
+          );
+          // Still update local storage even if DB update fails
+          this.deviceName = name;
+          const stored = await AsyncStorage.getItem(this.STORAGE_KEY);
+          if (stored) {
+            const deviceInfo = JSON.parse(stored);
+            deviceInfo.name = name;
+            await AsyncStorage.setItem(
+              this.STORAGE_KEY,
+              JSON.stringify(deviceInfo)
+            );
+          }
+          // Return false but don't throw - app can still function
+          return false;
+        }
+        throw error;
+      }
 
       this.deviceName = name;
 

@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef } from "react";
-import { View, Text, Modal, TextInput, Alert } from "react-native";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { View, Text, Modal, TextInput } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { DeviceService } from "@/lib/deviceService";
 import { useTheme } from "@/lib/themeContext";
 import Button from "@/components/ui/button";
+import Toast from "@/components/ui/toast";
 
 export type PairingModalProps = {
   visible: boolean;
@@ -16,7 +17,31 @@ export default function PairingModal({ visible, onClose }: PairingModalProps) {
   const [otherCode, setOtherCode] = useState("");
   const [isConnecting, setIsConnecting] = useState(false);
   const [isCodeValid, setIsCodeValid] = useState(true);
+  const [toastMessage, setToastMessage] = useState("");
+  const [toastType, setToastType] = useState<"error" | "success" | "info">(
+    "error"
+  );
+  const [showToast, setShowToast] = useState(false);
   const inputRef = useRef<TextInput>(null);
+
+  const showToastMessage = (
+    message: string,
+    type: "error" | "success" | "info" = "error"
+  ) => {
+    setToastMessage(message);
+    setToastType(type);
+    setShowToast(true);
+  };
+
+  const loadDeviceCode = useCallback(async () => {
+    try {
+      const { code } = await DeviceService.registerDevice();
+      setMyCode(code);
+    } catch (error) {
+      showToastMessage("Failed to load device code", "error");
+      console.error(error);
+    }
+  }, []);
 
   // Get device code when modal opens
   useEffect(() => {
@@ -31,7 +56,7 @@ export default function PairingModal({ visible, onClose }: PairingModalProps) {
       setOtherCode("");
       setIsCodeValid(true);
     }
-  }, [visible]);
+  }, [visible, loadDeviceCode]);
 
   // Validate pairing code format
   const validateCode = (code: string): boolean => {
@@ -48,16 +73,6 @@ export default function PairingModal({ visible, onClose }: PairingModalProps) {
     setIsCodeValid(validateCode(upperText));
   };
 
-  const loadDeviceCode = async () => {
-    try {
-      const { code } = await DeviceService.registerDevice();
-      setMyCode(code);
-    } catch (error) {
-      Alert.alert("Error", "Failed to load device code");
-      console.error(error);
-    }
-  };
-
   const handleConnect = async () => {
     if (!otherCode.trim()) return;
 
@@ -69,19 +84,23 @@ export default function PairingModal({ visible, onClose }: PairingModalProps) {
       );
 
       if (!otherDevice) {
-        Alert.alert("Error", "Device not found. Please check the code.");
+        showToastMessage("Device not found. Please check the code.", "error");
+        setIsConnecting(false);
         return;
       }
 
       // Pair with the device
       await DeviceService.pairWithDevice(otherDevice.id);
 
-      Alert.alert("Success", "Devices paired successfully!");
-      onClose();
+      showToastMessage("Devices paired successfully!", "success");
+      // Close modal after a short delay to show success toast
+      setTimeout(() => {
+        onClose();
+      }, 1500);
     } catch (error) {
-      Alert.alert(
-        "Error",
-        "Failed to pair devices. They may already be paired."
+      showToastMessage(
+        "Failed to pair devices. They may already be paired.",
+        "error"
       );
       console.error(error);
     } finally {
@@ -96,6 +115,12 @@ export default function PairingModal({ visible, onClose }: PairingModalProps) {
       onRequestClose={onClose}
     >
       <SafeAreaView className="flex-1">
+        <Toast
+          message={toastMessage}
+          type={toastType}
+          visible={showToast}
+          onHide={() => setShowToast(false)}
+        />
         <View
           className="flex-1 items-center justify-center p-4"
           style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
