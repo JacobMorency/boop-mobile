@@ -103,7 +103,8 @@ export default function SettingsModal({
         }).start();
       }, 2000);
     } catch (error) {
-      console.error("Failed to copy code:", error);
+      showToastMessage("Failed to copy code", "error");
+      console.error(error);
     }
   };
 
@@ -114,6 +115,7 @@ export default function SettingsModal({
       setPairedDevice(device);
     } catch (error) {
       console.error("Failed to load paired device:", error);
+      // Don't show error toast for loading - it's not user-initiated
     } finally {
       setIsLoading(false);
     }
@@ -154,7 +156,7 @@ export default function SettingsModal({
         showToastMessage("Failed to disconnect from partner.", "error");
       }
     } catch (error) {
-      showToastMessage("Failed to disconnect from partner.", "error");
+      showToastMessage("Failed to disconnect from partner", "error");
       console.error(error);
     } finally {
       setIsDisconnecting(false);

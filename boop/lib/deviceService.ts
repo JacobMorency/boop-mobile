@@ -27,10 +27,11 @@ export class DeviceService {
   // Register this device and get a pairing code (only if not already registered)
   static async registerDevice(
     name?: string
-  ): Promise<{ deviceId: string; code: string; name: string }> {
+  ): Promise<{ success: boolean; deviceId?: string; code?: string; name?: string; error?: string }> {
     // If we already have device info, return it
     if (this.deviceId && this.deviceCode && this.deviceName) {
       return {
+        success: true,
         deviceId: this.deviceId,
         code: this.deviceCode,
         name: this.deviceName,
@@ -76,7 +77,10 @@ export class DeviceService {
             .select()
             .single();
           
-          if (retryError) throw retryError;
+          if (retryError) {
+            console.error("Failed to register device (retry):", retryError);
+            return { success: false, error: "Failed to register device" };
+          }
           
           // Use retryData and set name locally
           this.deviceId = retryData.id;
@@ -93,12 +97,14 @@ export class DeviceService {
           );
           
           return {
+            success: true,
             deviceId: this.deviceId,
             code: this.deviceCode,
             name: this.deviceName,
           };
         }
-        throw error;
+        console.error("Failed to register device:", error);
+        return { success: false, error: "Failed to register device" };
       }
 
       this.deviceId = data.id;
@@ -117,6 +123,7 @@ export class DeviceService {
       );
 
       return {
+        success: true,
         deviceId: data.id,
         code: data.code,
         name: this.deviceName,
@@ -133,13 +140,14 @@ export class DeviceService {
         if (this.deviceId && this.deviceCode) {
           this.deviceName = name || "Anonymous";
           return {
+            success: true,
             deviceId: this.deviceId,
             code: this.deviceCode,
             name: this.deviceName,
           };
         }
       }
-      throw error;
+      return { success: false, error: "Failed to register device" };
     }
   }
 
@@ -187,7 +195,8 @@ export class DeviceService {
           // Return false but don't throw - app can still function
           return false;
         }
-        throw error;
+        console.error("Failed to update device name:", error);
+        return false;
       }
 
       this.deviceName = name;
@@ -232,9 +241,9 @@ export class DeviceService {
   }
 
   // Pair with another device
-  static async pairWithDevice(otherDeviceId: string): Promise<Pair | null> {
+  static async pairWithDevice(otherDeviceId: string): Promise<{ success: boolean; pair?: Pair; error?: string }> {
     if (!this.deviceId) {
-      throw new Error("Device not registered");
+      return { success: false, error: "Device not registered" };
     }
 
     try {
@@ -247,12 +256,20 @@ export class DeviceService {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("Failed to pair devices:", error);
+        // Check if devices are already paired
+        const errorMessage = error.message || String(error);
+        if (errorMessage.includes("unique") || errorMessage.includes("duplicate")) {
+          return { success: false, error: "Devices are already paired" };
+        }
+        return { success: false, error: "Failed to pair devices" };
+      }
 
-      return data;
+      return { success: true, pair: data };
     } catch (error) {
       console.error("Failed to pair devices:", error);
-      throw error;
+      return { success: false, error: "Failed to pair devices" };
     }
   }
 
@@ -275,7 +292,8 @@ export class DeviceService {
 
       if (error) {
         if (error.code === "PGRST116") return null; // No rows found
-        throw error;
+        console.error("Failed to get paired device:", error);
+        return null;
       }
 
       // Return the other device (not the current one)
@@ -307,7 +325,11 @@ export class DeviceService {
         .eq("from_device", this.deviceId)
         .gte("created_at", oneHourAgo);
 
-      if (error) throw error;
+      if (error) {
+        console.error("Failed to check rate limit:", error);
+        // Allow boop if rate limit check fails (fail open)
+        return { allowed: true };
+      }
 
       const boopCount = data?.length || 0;
       const maxBoopsPerHour = 20;
@@ -351,7 +373,10 @@ export class DeviceService {
         to_device: pairedDevice.id,
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Failed to send boop:", error);
+        return { success: false, error: "Failed to send boop" };
+      }
 
       // Send push notification if the paired device has a push token
       if (pairedDevice.expo_push_token) {
@@ -385,7 +410,10 @@ export class DeviceService {
         .delete()
         .or(`device_a.eq.${this.deviceId},device_b.eq.${this.deviceId}`);
 
-      if (error) throw error;
+      if (error) {
+        console.error("Failed to disconnect from partner:", error);
+        return false;
+      }
 
       return true;
     } catch (error) {
@@ -416,7 +444,13 @@ export class DeviceService {
       // Call the database function
       const { data, error } = await supabase.rpc("cleanup_old_pings");
 
-      if (error) throw error;
+      if (error) {
+        console.error("Failed to cleanup old pings:", error);
+        return { 
+          success: false, 
+          error: "Failed to cleanup old pings" 
+        };
+      }
 
       const deletedCount = data && data.length > 0 ? data[0].deleted_count : 0;
       

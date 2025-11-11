@@ -24,24 +24,28 @@ export default function PairingModal({ visible, onClose }: PairingModalProps) {
   const [showToast, setShowToast] = useState(false);
   const inputRef = useRef<TextInput>(null);
 
-  const showToastMessage = (
-    message: string,
-    type: "error" | "success" | "info" = "error"
-  ) => {
-    setToastMessage(message);
-    setToastType(type);
-    setShowToast(true);
-  };
+  const showToastMessage = useCallback(
+    (message: string, type: "error" | "success" | "info" = "error") => {
+      setToastMessage(message);
+      setToastType(type);
+      setShowToast(true);
+    },
+    []
+  );
 
   const loadDeviceCode = useCallback(async () => {
     try {
-      const { code } = await DeviceService.registerDevice();
-      setMyCode(code);
+      const result = await DeviceService.registerDevice();
+      if (result.success && result.code) {
+        setMyCode(result.code);
+      } else {
+        showToastMessage(result.error || "Failed to load device code", "error");
+      }
     } catch (error) {
       showToastMessage("Failed to load device code", "error");
       console.error(error);
     }
-  }, []);
+  }, [showToastMessage]);
 
   // Get device code when modal opens
   useEffect(() => {
@@ -90,20 +94,25 @@ export default function PairingModal({ visible, onClose }: PairingModalProps) {
       }
 
       // Pair with the device
-      await DeviceService.pairWithDevice(otherDevice.id);
+      const pairResult = await DeviceService.pairWithDevice(otherDevice.id);
 
-      showToastMessage("Devices paired successfully!", "success");
-      // Close modal after a short delay to show success toast
-      setTimeout(() => {
-        onClose();
-      }, 1500);
+      if (pairResult.success) {
+        showToastMessage("Devices paired successfully!", "success");
+        // Close modal after a short delay to show success toast
+        setTimeout(() => {
+          onClose();
+        }, 1500);
+      } else {
+        showToastMessage(
+          pairResult.error ||
+            "Failed to pair devices. They may already be paired.",
+          "error"
+        );
+        setIsConnecting(false);
+      }
     } catch (error) {
-      showToastMessage(
-        "Failed to pair devices. They may already be paired.",
-        "error"
-      );
+      showToastMessage("Failed to pair devices", "error");
       console.error(error);
-    } finally {
       setIsConnecting(false);
     }
   };

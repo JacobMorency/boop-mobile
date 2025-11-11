@@ -170,10 +170,15 @@ export default function NameInputModal({
 
   const generateDeviceCode = async () => {
     try {
-      const { code } = await DeviceService.registerDevice();
-      setDeviceCode(code);
+      const result = await DeviceService.registerDevice();
+      if (result.success && result.code) {
+        setDeviceCode(result.code);
+      } else {
+        showToastMessage(result.error || "Failed to generate device code", "error");
+      }
     } catch (error) {
-      console.error("Failed to generate device code:", error);
+      showToastMessage("Failed to generate device code", "error");
+      console.error(error);
     }
   };
 
@@ -213,7 +218,8 @@ export default function NameInputModal({
         }).start();
       }, 2000);
     } catch (error) {
-      console.error("Failed to copy code:", error);
+      showToastMessage("Failed to copy code", "error");
+      console.error(error);
     }
   };
 

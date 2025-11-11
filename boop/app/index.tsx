@@ -121,6 +121,7 @@ export default function Index() {
       }
     } catch (error) {
       console.error("Failed to load paired device:", error);
+      // Don't show error toast for loading - it's not user-initiated
     }
   };
 
