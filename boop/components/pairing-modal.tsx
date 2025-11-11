@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { View, Text, Modal, TextInput, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { DeviceService } from "@/lib/deviceService";
+import { useTheme } from "@/lib/themeContext";
 import Button from "@/components/ui/button";
 
 export type PairingModalProps = {
@@ -10,6 +11,7 @@ export type PairingModalProps = {
 };
 
 export default function PairingModal({ visible, onClose }: PairingModalProps) {
+  const { theme } = useTheme();
   const [myCode, setMyCode] = useState<string>("");
   const [otherCode, setOtherCode] = useState("");
   const [isConnecting, setIsConnecting] = useState(false);
@@ -94,21 +96,48 @@ export default function PairingModal({ visible, onClose }: PairingModalProps) {
       onRequestClose={onClose}
     >
       <SafeAreaView className="flex-1">
-        <View className="flex-1 items-center justify-center bg-black/50 p-4">
-          <View className="w-11/12 rounded-2xl bg-bg-light p-6">
-            <Text className="mb-4 text-xl font-semibold text-text">
+        <View
+          className="flex-1 items-center justify-center p-4"
+          style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
+        >
+          <View
+            className="w-11/12 rounded-2xl p-6"
+            style={{ backgroundColor: theme.colors.bg.light }}
+          >
+            <Text
+              className="mb-4 text-xl font-semibold"
+              style={{ color: theme.colors.text.DEFAULT }}
+            >
               Pairing
             </Text>
             <View className="mb-4">
-              <Text className="mb-1 text-sm text-text-muted">Your code</Text>
-              <View className="rounded-lg border border-border px-3 py-2 bg-bg dark:bg-bg">
-                <Text className="text-base tracking-widest text-text">
+              <Text
+                className="mb-1 text-sm"
+                style={{ color: theme.colors.text.muted }}
+              >
+                Your code
+              </Text>
+              <View
+                className="rounded-lg px-3 py-2"
+                style={{
+                  borderWidth: 1,
+                  borderColor: theme.colors.border.DEFAULT,
+                  backgroundColor: theme.colors.bg.DEFAULT,
+                }}
+              >
+                <Text
+                  className="text-base tracking-widest"
+                  style={{ color: theme.colors.text.DEFAULT }}
+                >
                   {myCode}
                 </Text>
               </View>
             </View>
             <View className="mb-6">
-              <Text className="mb-1 text-sm text-text-muted">
+              <Text
+                className="mb-1 text-sm"
+                style={{ color: theme.colors.text.muted }}
+              >
                 Enter partner code
               </Text>
               <TextInput
@@ -116,16 +145,25 @@ export default function PairingModal({ visible, onClose }: PairingModalProps) {
                 value={otherCode}
                 onChangeText={handleCodeChange}
                 placeholder="XXXXXX"
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={theme.colors.text.muted}
                 autoCapitalize="characters"
                 autoCorrect={false}
                 maxLength={6}
-                className={`rounded-lg border bg-bg px-3 py-2 text-base text-text ${
-                  isCodeValid ? "border-border-muted" : "border-danger"
-                }`}
+                className="rounded-lg px-3 py-2 text-base"
+                style={{
+                  borderWidth: 1,
+                  borderColor: isCodeValid
+                    ? theme.colors.border.muted
+                    : theme.colors.danger,
+                  backgroundColor: theme.colors.bg.DEFAULT,
+                  color: theme.colors.text.DEFAULT,
+                }}
               />
               {!isCodeValid && otherCode.length > 0 && (
-                <Text className="mt-1 text-xs text-danger">
+                <Text
+                  className="mt-1 text-xs"
+                  style={{ color: theme.colors.danger }}
+                >
                   Code must be 6 alphanumeric characters
                 </Text>
               )}

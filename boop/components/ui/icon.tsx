@@ -9,7 +9,10 @@ export type IconName =
   | "plus"
   | "minus"
   | "copy"
-  | "edit";
+  | "edit"
+  | "palette"
+  | "heart"
+  | "arrow-back";
 
 interface IconProps {
   name: IconName;
@@ -36,6 +39,12 @@ export default function Icon({ name, size = 24, color = "#000" }: IconProps) {
         return "copy-outline";
       case "edit":
         return "create-outline";
+      case "palette":
+        return "color-palette-outline";
+      case "heart":
+        return "heart-outline";
+      case "arrow-back":
+        return "arrow-back-outline";
       default:
         return "help-outline";
     }

@@ -41,6 +41,8 @@ create index idx_devices_code on devices(code);
 create index idx_devices_push_token on devices(expo_push_token);
 create index idx_pairs_devices on pairs(device_a, device_b);
 create index idx_pings_to_device on pings(to_device, created_at desc);
+-- Index for cleanup operations (efficient deletion of old pings)
+create index idx_pings_created_at on pings(created_at);
 
 -- Unique constraint to prevent duplicate pairs
 create unique index uniq_pairs_devices on pairs(least(device_a, device_b), greatest(device_a, device_b));
@@ -99,3 +101,57 @@ alter table pings enable row level security;
 create policy "Allow all operations on devices" on devices for all using (true);
 create policy "Allow all operations on pairs" on pairs for all using (true);
 create policy "Allow all operations on pings" on pings for all using (true);
+
+-- ============================================================================
+-- Cleanup and Maintenance Functions
+-- ============================================================================
+
+-- Function to cleanup old pings (older than 90 days)
+-- This helps prevent database bloat while keeping recent boop history
+-- Can be called manually or scheduled via Supabase cron jobs
+create or replace function cleanup_old_pings()
+returns table(deleted_count bigint)
+language plpgsql
+security definer
+as $$
+declare
+  deleted_count bigint;
+  cutoff_date timestamptz;
+begin
+  -- Delete pings older than 90 days
+  cutoff_date := now() - interval '90 days';
+  
+  with deleted as (
+    delete from pings
+    where created_at < cutoff_date
+    returning id
+  )
+  select count(*) into deleted_count from deleted;
+  
+  return query select deleted_count;
+  
+  -- Log cleanup (optional - you can add a logs table if needed)
+  raise notice 'Cleaned up % old pings (older than %)', deleted_count, cutoff_date;
+end;
+$$;
+
+-- ============================================================================
+-- Rate Limiting Notes
+-- ============================================================================
+-- Rate limiting is implemented client-side in DeviceService:
+-- - Maximum 20 boops per hour per device
+-- - Prevents abuse while keeping the app free and simple
+-- - Rate limit check happens before inserting new pings
+-- - User-friendly error message: "You're booping too fast! Please wait a moment."
+--
+-- To schedule automatic cleanup:
+-- 1. Use Supabase cron jobs (pg_cron extension)
+-- 2. Or create a Supabase Edge Function and schedule it
+-- 3. Recommended: Run cleanup daily at off-peak hours
+--
+-- Example cron job (run in Supabase SQL editor):
+-- select cron.schedule(
+--   'cleanup-old-pings',
+--   '0 2 * * *', -- Daily at 2 AM
+--   $$ select cleanup_old_pings(); $$
+-- );

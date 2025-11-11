@@ -10,8 +10,10 @@ import {
   Animated,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
 import { DeviceService } from "@/lib/deviceService";
 import { Device } from "@/lib/supabase";
+import { useTheme } from "@/lib/themeContext";
 import PairingModal from "./pairing-modal";
 import Icon from "./ui/icon";
 import Button from "./ui/button";
@@ -19,12 +21,16 @@ import Button from "./ui/button";
 export type SettingsModalProps = {
   visible: boolean;
   onClose: () => void;
+  onReopen?: () => void;
 };
 
 export default function SettingsModal({
   visible,
   onClose,
+  onReopen,
 }: SettingsModalProps) {
+  const { theme } = useTheme();
+  const router = useRouter();
   const [pairedDevice, setPairedDevice] = useState<Device | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
@@ -155,6 +161,14 @@ export default function SettingsModal({
     loadPairedDevice(); // Refresh the paired device
   };
 
+  const handleOpenThemePicker = () => {
+    onClose(); // Close settings modal first
+    // Small delay to ensure settings modal closes before navigating
+    setTimeout(() => {
+      router.push("/theme");
+    }, 300);
+  };
+
   const handleEditName = () => {
     setNewName(currentDevice.name || "");
     setIsEditingName(true);
@@ -195,10 +209,19 @@ export default function SettingsModal({
         onRequestClose={onClose}
       >
         <SafeAreaView className="flex-1">
-          <View className="flex-1 items-center justify-center bg-black/50 p-4">
-            <View className="w-11/12 rounded-2xl bg-bg-light p-6">
+          <View 
+            className="flex-1 items-center justify-center p-4"
+            style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
+          >
+            <View 
+              className="w-11/12 rounded-2xl p-6"
+              style={{ backgroundColor: theme.colors.bg.light }}
+            >
               <View className="flex-row items-center justify-between mb-6">
-                <Text className="text-xl font-semibold text-text">
+                <Text 
+                  className="text-xl font-semibold"
+                  style={{ color: theme.colors.text.DEFAULT }}
+                >
                   Settings
                 </Text>
                 <Pressable
@@ -208,18 +231,31 @@ export default function SettingsModal({
                     transform: [{ scale: pressed ? 0.9 : 1 }],
                   })}
                 >
-                  <Icon name="close" size={20} color="#9CA3AF" />
+                  <Icon name="close" size={20} color={theme.colors.text.muted} />
                 </Pressable>
               </View>
 
               {/* Your Code */}
               <View className="mb-6">
-                <Text className="mb-2 text-sm font-medium text-text-muted">
+                <Text 
+                  className="mb-2 text-sm font-medium"
+                  style={{ color: theme.colors.text.muted }}
+                >
                   Your Code
                 </Text>
-                <View className="rounded-lg border border-border bg-bg p-3">
+                <View 
+                  className="rounded-lg p-3"
+                  style={{
+                    borderWidth: 1,
+                    borderColor: theme.colors.border.DEFAULT,
+                    backgroundColor: theme.colors.bg.DEFAULT,
+                  }}
+                >
                   <View className="flex-row items-center justify-between">
-                    <Text className="text-xl font-bold tracking-widest text-text">
+                    <Text 
+                      className="text-xl font-bold tracking-widest"
+                      style={{ color: theme.colors.text.DEFAULT }}
+                    >
                       {currentDevice.code || "Loading..."}
                     </Text>
                     <Animated.View
@@ -249,7 +285,7 @@ export default function SettingsModal({
                             <Icon
                               name="copy"
                               size={20}
-                              color={currentDevice.code ? "#6d28d9" : "#9CA3AF"}
+                              color={theme.colors.text.muted}
                             />
                           </Animated.View>
                           <Animated.View
@@ -258,21 +294,27 @@ export default function SettingsModal({
                               opacity: copyButtonTextAnim,
                             }}
                           >
-                            <Icon name="check" size={20} color="#10b981" />
+                            <Icon name="check" size={20} color={theme.colors.success} />
                           </Animated.View>
                         </View>
                       </Pressable>
                     </Animated.View>
                   </View>
                 </View>
-                <Text className="mt-2 text-xs text-text-muted">
+                <Text 
+                  className="mt-2 text-xs"
+                  style={{ color: theme.colors.text.muted }}
+                >
                   Share this code with your partner to pair devices
                 </Text>
               </View>
 
               {/* Your Name */}
               <View className="mb-6">
-                <Text className="mb-2 text-sm font-medium text-text-muted">
+                <Text 
+                  className="mb-2 text-sm font-medium"
+                  style={{ color: theme.colors.text.muted }}
+                >
                   Your Name
                 </Text>
                 {isEditingName ? (
@@ -281,10 +323,16 @@ export default function SettingsModal({
                       value={newName}
                       onChangeText={setNewName}
                       placeholder="Enter your name"
-                      placeholderTextColor="#9CA3AF"
+                      placeholderTextColor={theme.colors.text.muted}
                       autoCapitalize="words"
                       autoCorrect={false}
-                      className="rounded-lg border border-border bg-bg px-3 py-2 text-base text-text"
+                      className="rounded-lg px-3 py-2 text-base"
+                      style={{
+                        borderWidth: 1,
+                        borderColor: theme.colors.border.DEFAULT,
+                        backgroundColor: theme.colors.bg.DEFAULT,
+                        color: theme.colors.text.DEFAULT,
+                      }}
                       maxLength={50}
                     />
                     <View className="flex-row mt-3" style={{ gap: 8 }}>
@@ -302,8 +350,18 @@ export default function SettingsModal({
                     </View>
                   </View>
                 ) : (
-                  <View className="flex-row items-center justify-between rounded-lg border border-border bg-bg p-3">
-                    <Text className="text-base text-text">
+                  <View 
+                    className="flex-row items-center justify-between rounded-lg p-3"
+                    style={{
+                      borderWidth: 1,
+                      borderColor: theme.colors.border.DEFAULT,
+                      backgroundColor: theme.colors.bg.DEFAULT,
+                    }}
+                  >
+                    <Text 
+                      className="text-base"
+                      style={{ color: theme.colors.text.DEFAULT }}
+                    >
                       {currentDevice.name || "Not set"}
                     </Text>
                     <Pressable
@@ -313,7 +371,7 @@ export default function SettingsModal({
                         opacity: pressed ? 0.6 : 1,
                       })}
                     >
-                      <Icon name="edit" size={20} color="#6d28d9" />
+                      <Icon name="edit" size={20} color={theme.colors.text.muted} />
                     </Pressable>
                   </View>
                 )}
@@ -321,27 +379,56 @@ export default function SettingsModal({
 
               {/* Connection Status */}
               <View className="mb-6">
-                <Text className="mb-2 text-sm font-medium text-text-muted">
+                <Text 
+                  className="mb-2 text-sm font-medium"
+                  style={{ color: theme.colors.text.muted }}
+                >
                   Connection Status
                 </Text>
                 {isLoading ? (
-                  <Text className="text-text-muted">Loading...</Text>
+                  <Text style={{ color: theme.colors.text.muted }}>Loading...</Text>
                 ) : pairedDevice ? (
-                  <View className="rounded-lg border border-border bg-bg p-3">
-                    <Text className="text-sm text-text-muted">
+                  <View 
+                    className="rounded-lg p-3"
+                    style={{
+                      borderWidth: 1,
+                      borderColor: theme.colors.border.DEFAULT,
+                      backgroundColor: theme.colors.bg.DEFAULT,
+                    }}
+                  >
+                    <Text 
+                      className="text-sm"
+                      style={{ color: theme.colors.text.muted }}
+                    >
                       Connected to:
                     </Text>
-                    <Text className="text-base font-medium text-text">
+                    <Text 
+                      className="text-base font-medium"
+                      style={{ color: theme.colors.text.DEFAULT }}
+                    >
                       Device {pairedDevice.code}
                     </Text>
-                    <Text className="text-xs text-text-muted">
+                    <Text 
+                      className="text-xs"
+                      style={{ color: theme.colors.text.muted }}
+                    >
                       Connected{" "}
                       {new Date(pairedDevice.created_at).toLocaleDateString()}
                     </Text>
                   </View>
                 ) : (
-                  <View className="rounded-lg border border-border bg-bg p-3">
-                    <Text className="text-sm text-text-muted">
+                  <View 
+                    className="rounded-lg p-3"
+                    style={{
+                      borderWidth: 1,
+                      borderColor: theme.colors.border.DEFAULT,
+                      backgroundColor: theme.colors.bg.DEFAULT,
+                    }}
+                  >
+                    <Text 
+                      className="text-sm"
+                      style={{ color: theme.colors.text.muted }}
+                    >
                       Not connected
                     </Text>
                   </View>
@@ -375,6 +462,56 @@ export default function SettingsModal({
                   onPress={onClose}
                   variant="secondary"
                 />
+              </View>
+
+              {/* Footer Section */}
+              <View 
+                className="mt-6 pt-4"
+                style={{
+                  borderTopWidth: 1,
+                  borderTopColor: theme.colors.border.muted,
+                }}
+              >
+                <View className="flex-row justify-center" style={{ gap: 16 }}>
+                  <Pressable
+                    onPress={handleOpenThemePicker}
+                    className="rounded-lg px-4 py-2 items-center justify-center min-w-[80px]"
+                    style={({ pressed }) => ({
+                      opacity: pressed ? 0.8 : 1,
+                      backgroundColor: theme.colors.bg.DEFAULT,
+                    })}
+                  >
+                    <Icon name="palette" size={18} color={theme.colors.text.muted} />
+                    <Text 
+                      className="mt-1 text-xs font-medium"
+                      style={{ color: theme.colors.text.muted }}
+                    >
+                      Theme
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => {
+                      // Placeholder for donate functionality
+                      Alert.alert(
+                        "Donate",
+                        "Donation feature coming soon! Thank you for your support."
+                      );
+                    }}
+                    className="rounded-lg px-4 py-2 items-center justify-center min-w-[80px]"
+                    style={({ pressed }) => ({
+                      opacity: pressed ? 0.8 : 1,
+                      backgroundColor: theme.colors.bg.DEFAULT,
+                    })}
+                  >
+                    <Icon name="heart" size={18} color={theme.colors.text.muted} />
+                    <Text 
+                      className="mt-1 text-xs font-medium"
+                      style={{ color: theme.colors.text.muted }}
+                    >
+                      Donate
+                    </Text>
+                  </Pressable>
+                </View>
               </View>
             </View>
           </View>

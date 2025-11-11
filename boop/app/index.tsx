@@ -7,9 +7,12 @@ import SettingsModal from "@/components/settings-modal";
 import NameInputModal from "@/components/name-input-modal";
 import { DeviceService } from "@/lib/deviceService";
 import { PushNotificationService } from "@/lib/pushNotificationService";
+import { ThemeService } from "@/lib/themeService";
+import { useTheme } from "@/lib/themeContext";
 import { Device } from "@/lib/supabase";
 
 export default function Index() {
+  const { theme } = useTheme();
   const [isSettingsVisible, setIsSettingsVisible] = useState(false);
   const [pairedDevice, setPairedDevice] = useState<Device | null>(null);
   const [showNameInput, setShowNameInput] = useState(false);
@@ -30,6 +33,7 @@ export default function Index() {
 
   const initializeApp = async () => {
     await DeviceService.initialize();
+    await ThemeService.initialize();
     setupNotifications();
     await loadPairedDevice();
 
@@ -201,7 +205,10 @@ export default function Index() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-bg">
+    <SafeAreaView 
+      className="flex-1"
+      style={{ backgroundColor: theme.colors.bg.DEFAULT }}
+    >
       {/* Connection Status - Animated indicator */}
       <Animated.View
         className="absolute top-12 left-6 z-10"
@@ -210,14 +217,21 @@ export default function Index() {
           transform: [{ translateY: connectionSlideAnim }],
         }}
       >
-        <View className="flex-row items-center rounded-full px-2 py-1">
+        <View 
+          className="flex-row items-center rounded-full px-2 py-1"
+          style={{ backgroundColor: theme.colors.bg.light }}
+        >
           <Animated.View
-            className="w-2 h-2 rounded-full bg-green-500 mr-2"
+            className="w-2 h-2 rounded-full mr-2"
             style={{
               transform: [{ scale: dotPulseAnim }],
+              backgroundColor: theme.colors.success,
             }}
           />
-          <Text className="text-xs font-medium text-text-muted">
+          <Text 
+            className="text-xs font-medium"
+            style={{ color: theme.colors.text.muted }}
+          >
             {pairedDevice?.name || pairedDevice?.code}
           </Text>
         </View>
@@ -251,7 +265,10 @@ export default function Index() {
             transform: [{ translateY: helperTextSlideAnim }],
           }}
         >
-          <Text className="text-center text-sm text-text-muted">
+          <Text 
+            className="text-center text-sm"
+            style={{ color: theme.colors.text.muted }}
+          >
             Long press the button to open settings and pair with a partner
           </Text>
         </Animated.View>
@@ -262,6 +279,9 @@ export default function Index() {
         onClose={() => {
           setIsSettingsVisible(false);
           loadPairedDevice(); // Refresh connection status when settings close
+        }}
+        onReopen={() => {
+          setIsSettingsVisible(true);
         }}
       />
 

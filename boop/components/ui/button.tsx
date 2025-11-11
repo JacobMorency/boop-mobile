@@ -1,6 +1,7 @@
 import { Pressable, Text, Animated, View } from "react-native";
 import { useRef } from "react";
 import * as Haptics from "expo-haptics";
+import { useTheme } from "@/lib/themeContext";
 
 export type ButtonProps = {
   title: string;
@@ -19,6 +20,7 @@ export default function Button({
   loading = false,
   className = "",
 }: ButtonProps) {
+  const { theme } = useTheme();
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const handlePressIn = () => {
@@ -48,10 +50,16 @@ export default function Button({
   };
 
   const isPrimary = variant === "primary";
-  const bgColor = isPrimary ? "bg-primary" : "bg-bg";
-  const textColor = isPrimary ? "text-white" : "text-text";
-  const borderColor = isPrimary ? "" : "border border-border";
-  const opacity = disabled || loading ? "opacity-50" : "";
+  const backgroundColor = isPrimary 
+    ? theme.colors.primary 
+    : theme.colors.bg.DEFAULT;
+  const textColor = isPrimary 
+    ? theme.colors.highlight 
+    : theme.colors.text.DEFAULT;
+  const borderColor = isPrimary 
+    ? "transparent" 
+    : theme.colors.border.DEFAULT;
+  const opacity = disabled || loading ? 0.5 : 1;
 
   return (
     <Animated.View
@@ -70,9 +78,19 @@ export default function Button({
         accessibilityState={{ disabled: disabled || loading }}
       >
         <View
-          className={`rounded-lg px-4 py-3 ${bgColor} ${borderColor} ${opacity} items-center justify-center min-h-[44px]`}
+          className="rounded-lg px-4 py-3 items-center justify-center"
+          style={{
+            backgroundColor,
+            borderWidth: isPrimary ? 0 : 1,
+            borderColor,
+            opacity,
+            minHeight: 44,
+          }}
         >
-          <Text className={`text-base font-semibold ${textColor}`}>
+          <Text 
+            className="text-base font-semibold"
+            style={{ color: textColor }}
+          >
             {loading ? "Loading..." : title}
           </Text>
         </View>

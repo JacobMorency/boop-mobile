@@ -205,12 +205,58 @@ export class DeviceService {
     }
   }
 
+  // Check rate limit (20 boops per hour)
+  static async checkRateLimit(): Promise<{ allowed: boolean; message?: string }> {
+    if (!this.deviceId) {
+      return { allowed: false, message: "Device not registered" };
+    }
+
+    try {
+      // Get pings from the last hour
+      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+      
+      const { data, error } = await supabase
+        .from("pings")
+        .select("id", { count: "exact" })
+        .eq("from_device", this.deviceId)
+        .gte("created_at", oneHourAgo);
+
+      if (error) throw error;
+
+      const boopCount = data?.length || 0;
+      const maxBoopsPerHour = 20;
+
+      if (boopCount >= maxBoopsPerHour) {
+        return {
+          allowed: false,
+          message: "You're booping too fast! Please wait a moment.",
+        };
+      }
+
+      return { allowed: true };
+    } catch (error) {
+      console.error("Failed to check rate limit:", error);
+      // Allow boop if rate limit check fails (fail open)
+      return { allowed: true };
+    }
+  }
+
   // Send a "boop" (ping)
-  static async sendBoop(): Promise<boolean> {
-    if (!this.deviceId) return false;
+  static async sendBoop(): Promise<{ success: boolean; error?: string }> {
+    if (!this.deviceId) {
+      return { success: false, error: "Device not registered" };
+    }
 
     const pairedDevice = await this.getPairedDevice();
-    if (!pairedDevice) return false;
+    if (!pairedDevice) {
+      return { success: false, error: "No paired device found" };
+    }
+
+    // Check rate limit
+    const rateLimitCheck = await this.checkRateLimit();
+    if (!rateLimitCheck.allowed) {
+      return { success: false, error: rateLimitCheck.message };
+    }
 
     try {
       // Insert the ping into database
@@ -236,10 +282,10 @@ export class DeviceService {
         }
       }
 
-      return true;
+      return { success: true };
     } catch (error) {
       console.error("Failed to send boop:", error);
-      return false;
+      return { success: false, error: "Failed to send boop" };
     }
   }
 
@@ -273,6 +319,30 @@ export class DeviceService {
         .eq("id", this.deviceId);
     } catch (error) {
       console.error("Failed to update last seen:", error);
+    }
+  }
+
+  // Cleanup old pings (older than 90 days)
+  // Note: Best practice is to run this server-side via Supabase cron jobs
+  // This method is provided for manual cleanup if needed
+  static async cleanupOldPings(): Promise<{ success: boolean; deletedCount?: number; error?: string }> {
+    try {
+      // Call the database function
+      const { data, error } = await supabase.rpc("cleanup_old_pings");
+
+      if (error) throw error;
+
+      const deletedCount = data && data.length > 0 ? data[0].deleted_count : 0;
+      
+      console.log(`Cleaned up ${deletedCount} old pings`);
+      
+      return { success: true, deletedCount: Number(deletedCount) };
+    } catch (error) {
+      console.error("Failed to cleanup old pings:", error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : "Failed to cleanup old pings" 
+      };
     }
   }
 }

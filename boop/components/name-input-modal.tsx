@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { DeviceService } from "@/lib/deviceService";
+import { useTheme } from "@/lib/themeContext";
 import Button from "@/components/ui/button";
 import Icon from "@/components/ui/icon";
 
@@ -23,6 +24,7 @@ export default function NameInputModal({
   visible,
   onComplete,
 }: NameInputModalProps) {
+  const { theme } = useTheme();
   const [name, setName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [deviceCode, setDeviceCode] = useState<string>("");
@@ -249,10 +251,11 @@ export default function NameInputModal({
           }}
         >
           <Animated.View
-            className="w-11/12 rounded-2xl bg-bg-light p-6"
+            className="w-11/12 rounded-2xl p-6"
             style={{
               opacity: modalOpacityAnim,
               transform: [{ scale: modalScaleAnim }],
+              backgroundColor: theme.colors.bg.light,
             }}
           >
             <Animated.View
@@ -261,7 +264,10 @@ export default function NameInputModal({
                 transform: [{ translateY: titleSlideAnim }],
               }}
             >
-              <Text className="mb-2 text-2xl font-bold text-text">
+              <Text 
+                className="mb-2 text-2xl font-bold"
+                style={{ color: theme.colors.text.DEFAULT }}
+              >
                 Welcome to Boop! 👋
               </Text>
             </Animated.View>
@@ -271,7 +277,10 @@ export default function NameInputModal({
                 opacity: descriptionOpacityAnim,
               }}
             >
-              <Text className="mb-4 text-base text-text-muted">
+              <Text 
+                className="mb-4 text-base"
+                style={{ color: theme.colors.text.muted }}
+              >
                 Boop lets you send quick "thinking of you" notifications to a
                 special person. Pair your devices and tap the button to send a
                 boop!
@@ -281,17 +290,26 @@ export default function NameInputModal({
             {/* Your Pairing Code */}
             {deviceCode && (
               <Animated.View
-                className="mb-6 rounded-lg border border-border bg-bg p-4"
+                className="mb-6 rounded-lg p-4"
                 style={{
                   opacity: codeOpacityAnim,
                   transform: [{ scale: codeScaleAnim }],
+                  borderWidth: 1,
+                  borderColor: theme.colors.border.DEFAULT,
+                  backgroundColor: theme.colors.bg.DEFAULT,
                 }}
               >
-                <Text className="mb-2 text-sm font-medium text-text-muted">
+                <Text 
+                  className="mb-2 text-sm font-medium"
+                  style={{ color: theme.colors.text.muted }}
+                >
                   Your pairing code
                 </Text>
                 <View className="flex-row items-center justify-between">
-                  <Text className="text-2xl font-bold tracking-widest text-text">
+                  <Text 
+                    className="text-2xl font-bold tracking-widest"
+                    style={{ color: theme.colors.text.DEFAULT }}
+                  >
                     {deviceCode}
                   </Text>
                   <Animated.View
@@ -317,7 +335,7 @@ export default function NameInputModal({
                             }),
                           }}
                         >
-                          <Icon name="copy" size={20} color="#6d28d9" />
+                          <Icon name="copy" size={20} color={theme.colors.text.muted} />
                         </Animated.View>
                         <Animated.View
                           className="absolute"
@@ -325,13 +343,16 @@ export default function NameInputModal({
                             opacity: copyButtonTextAnim,
                           }}
                         >
-                          <Icon name="check" size={20} color="#10b981" />
+                          <Icon name="check" size={20} color={theme.colors.success} />
                         </Animated.View>
                       </View>
                     </Pressable>
                   </Animated.View>
                 </View>
-                <Text className="mt-2 text-xs text-text-muted">
+                <Text 
+                  className="mt-2 text-xs"
+                  style={{ color: theme.colors.text.muted }}
+                >
                   Share this code with your partner to connect your devices
                 </Text>
               </Animated.View>
@@ -344,20 +365,32 @@ export default function NameInputModal({
                 transform: [{ translateY: inputSlideAnim }],
               }}
             >
-              <Text className="mb-2 text-sm font-medium text-text-muted">
+              <Text 
+                className="mb-2 text-sm font-medium"
+                style={{ color: theme.colors.text.muted }}
+              >
                 What should we call you?
               </Text>
-              <Text className="mb-3 text-xs text-text-muted">
+              <Text 
+                className="mb-3 text-xs"
+                style={{ color: theme.colors.text.muted }}
+              >
                 This name will appear in notifications when you boop someone
               </Text>
               <TextInput
                 value={name}
                 onChangeText={setName}
                 placeholder="Enter your name"
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={theme.colors.text.muted}
                 autoCapitalize="words"
                 autoCorrect={false}
-                className="rounded-lg border border-border bg-bg px-4 py-3 text-base text-text"
+                className="rounded-lg px-4 py-3 text-base"
+                style={{
+                  borderWidth: 1,
+                  borderColor: theme.colors.border.DEFAULT,
+                  backgroundColor: theme.colors.bg.DEFAULT,
+                  color: theme.colors.text.DEFAULT,
+                }}
                 maxLength={50}
                 onSubmitEditing={handleSubmit}
                 returnKeyType="done"

@@ -1,13 +1,15 @@
 import { Pressable, Text, Alert, View, Animated } from "react-native";
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useMemo } from "react";
 import * as Haptics from "expo-haptics";
 import { DeviceService } from "@/lib/deviceService";
+import { useTheme } from "@/lib/themeContext";
 
 export type BoopButtonProps = {
   onLongPress?: () => void;
 };
 
 export default function BoopButton({ onLongPress }: BoopButtonProps) {
+  const { theme } = useTheme();
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const shadowAnim = useRef(new Animated.Value(0.3)).current;
   const colorAnim = useRef(new Animated.Value(0)).current;
@@ -88,8 +90,8 @@ export default function BoopButton({ onLongPress }: BoopButtonProps) {
     ]).start();
 
     try {
-      const success = await DeviceService.sendBoop();
-      if (success) {
+      const result = await DeviceService.sendBoop();
+      if (result.success) {
         // Success haptic feedback
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         // Subtle inline confirmation: fade in, delay, fade out
@@ -107,9 +109,10 @@ export default function BoopButton({ onLongPress }: BoopButtonProps) {
           }),
         ]).start();
       } else {
+        // Show error message (rate limit or other error)
         Alert.alert(
           "Error",
-          "No paired device found. Please pair with another device first."
+          result.error || "Failed to send boop"
         );
       }
     } catch (error) {
@@ -171,10 +174,15 @@ export default function BoopButton({ onLongPress }: BoopButtonProps) {
     ]).start();
   };
 
-  const backgroundColor = colorAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ["#c8a2c8", "#10B981"], // Lilac to green on success
-  });
+  // Use theme colors dynamically - recreate interpolation when theme changes
+  const backgroundColor = useMemo(
+    () =>
+      colorAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: [theme.colors.primary, theme.colors.success],
+      }),
+    [theme.colors.primary, theme.colors.success, colorAnim]
+  );
 
   const rotation = rotationAnim.interpolate({
     inputRange: [0, 1],
@@ -200,7 +208,7 @@ export default function BoopButton({ onLongPress }: BoopButtonProps) {
             { rotate: rotation },
           ],
           shadowOpacity: Animated.multiply(shadowAnim, glowAnim),
-          shadowColor: "#c8a2c8",
+          shadowColor: theme.colors.primary,
           shadowOffset: {
             width: 0,
             height: 8,
