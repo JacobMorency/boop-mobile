@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { View, Text, ScrollView, Pressable } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import * as Haptics from "expo-haptics";
 import { ThemeService, Theme, ThemeName } from "@/lib/themeService";
 // import { PurchaseService } from "@/lib/purchaseService"; // Commented out - IAP disabled for now
 // import { THEME_PRODUCT_IDS } from "@/lib/themeService"; // Commented out - IAP disabled for now
@@ -80,6 +81,8 @@ export default function ThemeScreen() {
   // };
 
   const handleSelectTheme = async (themeName: ThemeName) => {
+    // Haptic feedback
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     // All themes are now free - no purchase check needed
     await setTheme(themeName);
     // Theme will update automatically via context

@@ -11,6 +11,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import * as Haptics from "expo-haptics";
+import Constants from "expo-constants";
 import { DeviceService } from "@/lib/deviceService";
 import { Device } from "@/lib/supabase";
 import { useTheme } from "@/lib/themeContext";
@@ -48,7 +50,9 @@ export default function SettingsModal({
     code: null,
   });
   const [toastMessage, setToastMessage] = useState("");
-  const [toastType, setToastType] = useState<"error" | "success" | "info">("error");
+  const [toastType, setToastType] = useState<"error" | "success" | "info">(
+    "error"
+  );
   const [showToast, setShowToast] = useState(false);
 
   // Animation refs for copy button
@@ -71,6 +75,9 @@ export default function SettingsModal({
   const copyCodeToClipboard = async () => {
     if (!currentDevice.code) return;
     try {
+      // Haptic feedback
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
       // Button press animation
       Animated.sequence([
         Animated.spring(copyButtonScaleAnim, {
@@ -141,7 +148,10 @@ export default function SettingsModal({
     );
   };
 
-  const showToastMessage = (message: string, type: "error" | "success" | "info" = "error") => {
+  const showToastMessage = (
+    message: string,
+    type: "error" | "success" | "info" = "error"
+  ) => {
     setToastMessage(message);
     setToastType(type);
     setShowToast(true);
@@ -230,16 +240,16 @@ export default function SettingsModal({
             visible={showToast}
             onHide={() => setShowToast(false)}
           />
-          <View 
+          <View
             className="flex-1 items-center justify-center p-4"
             style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
           >
-            <View 
+            <View
               className="w-11/12 rounded-2xl p-6"
               style={{ backgroundColor: theme.colors.bg.light }}
             >
               <View className="flex-row items-center justify-between mb-6">
-                <Text 
+                <Text
                   className="text-xl font-semibold"
                   style={{ color: theme.colors.text.DEFAULT }}
                 >
@@ -252,19 +262,23 @@ export default function SettingsModal({
                     transform: [{ scale: pressed ? 0.9 : 1 }],
                   })}
                 >
-                  <Icon name="close" size={20} color={theme.colors.text.muted} />
+                  <Icon
+                    name="close"
+                    size={20}
+                    color={theme.colors.text.muted}
+                  />
                 </Pressable>
               </View>
 
               {/* Your Code */}
               <View className="mb-6">
-                <Text 
+                <Text
                   className="mb-2 text-sm font-medium"
                   style={{ color: theme.colors.text.muted }}
                 >
                   Your Code
                 </Text>
-                <View 
+                <View
                   className="rounded-lg p-3"
                   style={{
                     borderWidth: 1,
@@ -273,7 +287,7 @@ export default function SettingsModal({
                   }}
                 >
                   <View className="flex-row items-center justify-between">
-                    <Text 
+                    <Text
                       className="text-xl font-bold tracking-widest"
                       style={{ color: theme.colors.text.DEFAULT }}
                     >
@@ -294,7 +308,10 @@ export default function SettingsModal({
                           height: 36,
                         })}
                       >
-                        <View className="absolute items-center justify-center" style={{ width: 20, height: 20 }}>
+                        <View
+                          className="absolute items-center justify-center"
+                          style={{ width: 20, height: 20 }}
+                        >
                           <Animated.View
                             style={{
                               opacity: copyButtonTextAnim.interpolate({
@@ -315,14 +332,18 @@ export default function SettingsModal({
                               opacity: copyButtonTextAnim,
                             }}
                           >
-                            <Icon name="check" size={20} color={theme.colors.success} />
+                            <Icon
+                              name="check"
+                              size={20}
+                              color={theme.colors.success}
+                            />
                           </Animated.View>
                         </View>
                       </Pressable>
                     </Animated.View>
                   </View>
                 </View>
-                <Text 
+                <Text
                   className="mt-2 text-xs"
                   style={{ color: theme.colors.text.muted }}
                 >
@@ -332,7 +353,7 @@ export default function SettingsModal({
 
               {/* Your Name */}
               <View className="mb-6">
-                <Text 
+                <Text
                   className="mb-2 text-sm font-medium"
                   style={{ color: theme.colors.text.muted }}
                 >
@@ -371,7 +392,7 @@ export default function SettingsModal({
                     </View>
                   </View>
                 ) : (
-                  <View 
+                  <View
                     className="flex-row items-center justify-between rounded-lg p-3"
                     style={{
                       borderWidth: 1,
@@ -379,7 +400,7 @@ export default function SettingsModal({
                       backgroundColor: theme.colors.bg.DEFAULT,
                     }}
                   >
-                    <Text 
+                    <Text
                       className="text-base"
                       style={{ color: theme.colors.text.DEFAULT }}
                     >
@@ -392,7 +413,11 @@ export default function SettingsModal({
                         opacity: pressed ? 0.6 : 1,
                       })}
                     >
-                      <Icon name="edit" size={20} color={theme.colors.text.muted} />
+                      <Icon
+                        name="edit"
+                        size={20}
+                        color={theme.colors.text.muted}
+                      />
                     </Pressable>
                   </View>
                 )}
@@ -400,16 +425,18 @@ export default function SettingsModal({
 
               {/* Connection Status */}
               <View className="mb-6">
-                <Text 
+                <Text
                   className="mb-2 text-sm font-medium"
                   style={{ color: theme.colors.text.muted }}
                 >
                   Connection Status
                 </Text>
                 {isLoading ? (
-                  <Text style={{ color: theme.colors.text.muted }}>Loading...</Text>
+                  <Text style={{ color: theme.colors.text.muted }}>
+                    Loading...
+                  </Text>
                 ) : pairedDevice ? (
-                  <View 
+                  <View
                     className="rounded-lg p-3"
                     style={{
                       borderWidth: 1,
@@ -417,19 +444,19 @@ export default function SettingsModal({
                       backgroundColor: theme.colors.bg.DEFAULT,
                     }}
                   >
-                    <Text 
+                    <Text
                       className="text-sm"
                       style={{ color: theme.colors.text.muted }}
                     >
                       Connected to:
                     </Text>
-                    <Text 
+                    <Text
                       className="text-base font-medium"
                       style={{ color: theme.colors.text.DEFAULT }}
                     >
                       Device {pairedDevice.code}
                     </Text>
-                    <Text 
+                    <Text
                       className="text-xs"
                       style={{ color: theme.colors.text.muted }}
                     >
@@ -438,7 +465,7 @@ export default function SettingsModal({
                     </Text>
                   </View>
                 ) : (
-                  <View 
+                  <View
                     className="rounded-lg p-3"
                     style={{
                       borderWidth: 1,
@@ -446,7 +473,7 @@ export default function SettingsModal({
                       backgroundColor: theme.colors.bg.DEFAULT,
                     }}
                   >
-                    <Text 
+                    <Text
                       className="text-sm"
                       style={{ color: theme.colors.text.muted }}
                     >
@@ -478,15 +505,11 @@ export default function SettingsModal({
                   />
                 )}
 
-                <Button
-                  title="Close"
-                  onPress={onClose}
-                  variant="secondary"
-                />
+                <Button title="Close" onPress={onClose} variant="secondary" />
               </View>
 
               {/* Footer Section */}
-              <View 
+              <View
                 className="mt-6 pt-4"
                 style={{
                   borderTopWidth: 1,
@@ -495,15 +518,22 @@ export default function SettingsModal({
               >
                 <View className="flex-row justify-center" style={{ gap: 16 }}>
                   <Pressable
-                    onPress={handleOpenThemePicker}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      handleOpenThemePicker();
+                    }}
                     className="rounded-lg px-4 py-2 items-center justify-center min-w-[80px]"
                     style={({ pressed }) => ({
                       opacity: pressed ? 0.8 : 1,
                       backgroundColor: theme.colors.bg.DEFAULT,
                     })}
                   >
-                    <Icon name="palette" size={18} color={theme.colors.text.muted} />
-                    <Text 
+                    <Icon
+                      name="palette"
+                      size={18}
+                      color={theme.colors.text.muted}
+                    />
+                    <Text
                       className="mt-1 text-xs font-medium"
                       style={{ color: theme.colors.text.muted }}
                     >
@@ -511,15 +541,25 @@ export default function SettingsModal({
                     </Text>
                   </Pressable>
                   <Pressable
-                    onPress={() => Alert.alert("Donations Coming Soon", "Donations will be available soon! 🎉")}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      Alert.alert(
+                        "Donations Coming Soon",
+                        "Donations will be available soon! 🎉"
+                      );
+                    }}
                     className="rounded-lg px-4 py-2 items-center justify-center min-w-[80px]"
                     style={({ pressed }) => ({
                       opacity: pressed ? 0.8 : 1,
                       backgroundColor: theme.colors.bg.DEFAULT,
                     })}
                   >
-                    <Icon name="heart" size={18} color={theme.colors.text.muted} />
-                    <Text 
+                    <Icon
+                      name="heart"
+                      size={18}
+                      color={theme.colors.text.muted}
+                    />
+                    <Text
                       className="mt-1 text-xs font-medium"
                       style={{ color: theme.colors.text.muted }}
                     >
@@ -527,6 +567,13 @@ export default function SettingsModal({
                     </Text>
                   </Pressable>
                 </View>
+                {/* App Version */}
+                <Text
+                  className="text-center mt-4 text-xs"
+                  style={{ color: theme.colors.text.muted }}
+                >
+                  Version {Constants.expoConfig?.version || "1.1.1"}
+                </Text>
               </View>
             </View>
           </View>

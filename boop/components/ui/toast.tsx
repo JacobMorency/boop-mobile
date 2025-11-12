@@ -85,7 +85,7 @@ export default function Toast({
     <Animated.View
       style={{
         position: "absolute",
-        top: 60,
+        top: 100, // Moved down to avoid connection status indicator
         left: 16,
         right: 16,
         zIndex: 9999,

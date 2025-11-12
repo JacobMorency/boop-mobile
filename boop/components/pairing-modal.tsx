@@ -1,5 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { View, Text, Modal, TextInput } from "react-native";
+import {
+  View,
+  Text,
+  Modal,
+  TextInput,
+  Keyboard,
+  TouchableWithoutFeedback,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { DeviceService } from "@/lib/deviceService";
 import { useTheme } from "@/lib/themeContext";
@@ -130,95 +137,97 @@ export default function PairingModal({ visible, onClose }: PairingModalProps) {
           visible={showToast}
           onHide={() => setShowToast(false)}
         />
-        <View
-          className="flex-1 items-center justify-center p-4"
-          style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
-        >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <View
-            className="w-11/12 rounded-2xl p-6"
-            style={{ backgroundColor: theme.colors.bg.light }}
+            className="flex-1 items-center justify-center p-4"
+            style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
           >
-            <Text
-              className="mb-4 text-xl font-semibold"
-              style={{ color: theme.colors.text.DEFAULT }}
+            <View
+              className="w-11/12 rounded-2xl p-6"
+              style={{ backgroundColor: theme.colors.bg.light }}
             >
-              Pairing
-            </Text>
-            <View className="mb-4">
               <Text
-                className="mb-1 text-sm"
-                style={{ color: theme.colors.text.muted }}
+                className="mb-4 text-xl font-semibold"
+                style={{ color: theme.colors.text.DEFAULT }}
               >
-                Your code
+                Pairing
               </Text>
-              <View
-                className="rounded-lg px-3 py-2"
-                style={{
-                  borderWidth: 1,
-                  borderColor: theme.colors.border.DEFAULT,
-                  backgroundColor: theme.colors.bg.DEFAULT,
-                }}
-              >
+              <View className="mb-4">
                 <Text
-                  className="text-base tracking-widest"
-                  style={{ color: theme.colors.text.DEFAULT }}
+                  className="mb-1 text-sm"
+                  style={{ color: theme.colors.text.muted }}
                 >
-                  {myCode}
+                  Your code
                 </Text>
+                <View
+                  className="rounded-lg px-3 py-2"
+                  style={{
+                    borderWidth: 1,
+                    borderColor: theme.colors.border.DEFAULT,
+                    backgroundColor: theme.colors.bg.DEFAULT,
+                  }}
+                >
+                  <Text
+                    className="text-base tracking-widest"
+                    style={{ color: theme.colors.text.DEFAULT }}
+                  >
+                    {myCode}
+                  </Text>
+                </View>
+              </View>
+              <View className="mb-6">
+                <Text
+                  className="mb-1 text-sm"
+                  style={{ color: theme.colors.text.muted }}
+                >
+                  Enter partner code
+                </Text>
+                <TextInput
+                  ref={inputRef}
+                  value={otherCode}
+                  onChangeText={handleCodeChange}
+                  placeholder="XXXXXX"
+                  placeholderTextColor={theme.colors.text.muted}
+                  autoCapitalize="characters"
+                  autoCorrect={false}
+                  maxLength={6}
+                  className="rounded-lg px-3 py-2 text-base"
+                  style={{
+                    borderWidth: 1,
+                    borderColor: isCodeValid
+                      ? theme.colors.border.muted
+                      : theme.colors.danger,
+                    backgroundColor: theme.colors.bg.DEFAULT,
+                    color: theme.colors.text.DEFAULT,
+                  }}
+                />
+                {!isCodeValid && otherCode.length > 0 && (
+                  <Text
+                    className="mt-1 text-xs"
+                    style={{ color: theme.colors.danger }}
+                  >
+                    Code must be 6 alphanumeric characters
+                  </Text>
+                )}
+              </View>
+              <View className="flex-row" style={{ gap: 12 }}>
+                <Button
+                  title="Cancel"
+                  onPress={onClose}
+                  variant="secondary"
+                  className="flex-1"
+                />
+                <Button
+                  title={isConnecting ? "Connecting..." : "Connect"}
+                  onPress={handleConnect}
+                  disabled={!otherCode.trim() || isConnecting || !isCodeValid}
+                  loading={isConnecting}
+                  className="flex-1"
+                />
               </View>
             </View>
-            <View className="mb-6">
-              <Text
-                className="mb-1 text-sm"
-                style={{ color: theme.colors.text.muted }}
-              >
-                Enter partner code
-              </Text>
-              <TextInput
-                ref={inputRef}
-                value={otherCode}
-                onChangeText={handleCodeChange}
-                placeholder="XXXXXX"
-                placeholderTextColor={theme.colors.text.muted}
-                autoCapitalize="characters"
-                autoCorrect={false}
-                maxLength={6}
-                className="rounded-lg px-3 py-2 text-base"
-                style={{
-                  borderWidth: 1,
-                  borderColor: isCodeValid
-                    ? theme.colors.border.muted
-                    : theme.colors.danger,
-                  backgroundColor: theme.colors.bg.DEFAULT,
-                  color: theme.colors.text.DEFAULT,
-                }}
-              />
-              {!isCodeValid && otherCode.length > 0 && (
-                <Text
-                  className="mt-1 text-xs"
-                  style={{ color: theme.colors.danger }}
-                >
-                  Code must be 6 alphanumeric characters
-                </Text>
-              )}
-            </View>
-            <View className="flex-row" style={{ gap: 12 }}>
-              <Button
-                title="Cancel"
-                onPress={onClose}
-                variant="secondary"
-                className="flex-1"
-              />
-              <Button
-                title={isConnecting ? "Connecting..." : "Connect"}
-                onPress={handleConnect}
-                disabled={!otherCode.trim() || isConnecting || !isCodeValid}
-                loading={isConnecting}
-                className="flex-1"
-              />
-            </View>
           </View>
-        </View>
+        </TouchableWithoutFeedback>
       </SafeAreaView>
     </Modal>
   );

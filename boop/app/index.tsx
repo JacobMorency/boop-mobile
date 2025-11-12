@@ -5,6 +5,7 @@ import * as Haptics from "expo-haptics";
 import BoopButton from "@/components/boop-button";
 import SettingsModal from "@/components/settings-modal";
 import NameInputModal from "@/components/name-input-modal";
+import WelcomeModal from "@/components/welcome-modal";
 import Toast from "@/components/ui/toast";
 import { DeviceService } from "@/lib/deviceService";
 import { PushNotificationService } from "@/lib/pushNotificationService";
@@ -17,6 +18,7 @@ export default function Index() {
   const { theme } = useTheme();
   const [isSettingsVisible, setIsSettingsVisible] = useState(false);
   const [pairedDevice, setPairedDevice] = useState<Device | null>(null);
+  const [showWelcome, setShowWelcome] = useState(false);
   const [showNameInput, setShowNameInput] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
   const [toastType, setToastType] = useState<"error" | "success" | "info">("error");
@@ -43,10 +45,11 @@ export default function Index() {
     setupNotifications();
     await loadPairedDevice();
 
-    // Check if user needs to set their name
+    // Check if this is first time user
     const deviceInfo = DeviceService.getCurrentDevice();
     if (!deviceInfo.name || deviceInfo.name === "Anonymous") {
-      setShowNameInput(true);
+      // Show welcome screen first, then name input
+      setShowWelcome(true);
     }
   };
 
@@ -274,7 +277,10 @@ export default function Index() {
           }}
         >
           <BoopButton 
-            onLongPress={() => setIsSettingsVisible(true)}
+            onLongPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              setIsSettingsVisible(true);
+            }}
             onError={(message) => showToastMessage(message, "error")}
           />
         </Animated.View>
@@ -295,6 +301,14 @@ export default function Index() {
           </Text>
         </Animated.View>
       </View>
+
+      <WelcomeModal
+        visible={showWelcome}
+        onContinue={() => {
+          setShowWelcome(false);
+          setShowNameInput(true);
+        }}
+      />
 
       <SettingsModal
         visible={isSettingsVisible}

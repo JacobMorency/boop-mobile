@@ -310,7 +310,7 @@ export class DeviceService {
   }
 
   // Check rate limit (20 boops per hour)
-  static async checkRateLimit(): Promise<{ allowed: boolean; message?: string }> {
+  static async checkRateLimit(): Promise<{ allowed: boolean; message?: string; secondsRemaining?: number }> {
     if (!this.deviceId) {
       return { allowed: false, message: "Device not registered" };
     }
@@ -321,9 +321,10 @@ export class DeviceService {
       
       const { data, error } = await supabase
         .from("pings")
-        .select("id", { count: "exact" })
+        .select("created_at")
         .eq("from_device", this.deviceId)
-        .gte("created_at", oneHourAgo);
+        .gte("created_at", oneHourAgo)
+        .order("created_at", { ascending: false });
 
       if (error) {
         console.error("Failed to check rate limit:", error);
@@ -335,6 +336,24 @@ export class DeviceService {
       const maxBoopsPerHour = 20;
 
       if (boopCount >= maxBoopsPerHour) {
+        // Find the oldest ping in the current window
+        const oldestPing = data?.[data.length - 1];
+        if (oldestPing?.created_at) {
+          const oldestPingTime = new Date(oldestPing.created_at).getTime();
+          const oneHourFromOldest = oldestPingTime + 60 * 60 * 1000;
+          const now = Date.now();
+          const secondsRemaining = Math.ceil((oneHourFromOldest - now) / 1000);
+          
+          const minutes = Math.floor(secondsRemaining / 60);
+          const seconds = secondsRemaining % 60;
+          
+          return {
+            allowed: false,
+            message: `Rate limit reached. Try again in ${minutes}m ${seconds}s`,
+            secondsRemaining,
+          };
+        }
+        
         return {
           allowed: false,
           message: "You're booping too fast! Please wait a moment.",
@@ -350,7 +369,7 @@ export class DeviceService {
   }
 
   // Send a "boop" (ping)
-  static async sendBoop(): Promise<{ success: boolean; error?: string }> {
+  static async sendBoop(): Promise<{ success: boolean; error?: string; rateLimitSecondsRemaining?: number }> {
     if (!this.deviceId) {
       return { success: false, error: "Device not registered" };
     }
@@ -363,7 +382,11 @@ export class DeviceService {
     // Check rate limit
     const rateLimitCheck = await this.checkRateLimit();
     if (!rateLimitCheck.allowed) {
-      return { success: false, error: rateLimitCheck.message };
+      return { 
+        success: false, 
+        error: rateLimitCheck.message,
+        rateLimitSecondsRemaining: rateLimitCheck.secondsRemaining,
+      };
     }
 
     try {

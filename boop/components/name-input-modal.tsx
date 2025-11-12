@@ -7,8 +7,11 @@ import {
   Pressable,
   Clipboard,
   Animated,
+  Keyboard,
+  TouchableWithoutFeedback,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import * as Haptics from "expo-haptics";
 import { DeviceService } from "@/lib/deviceService";
 import { useTheme } from "@/lib/themeContext";
 import Button from "@/components/ui/button";
@@ -184,6 +187,9 @@ export default function NameInputModal({
 
   const copyCodeToClipboard = async () => {
     try {
+      // Haptic feedback
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      
       // Button press animation
       Animated.sequence([
         Animated.spring(copyButtonScaleAnim, {
@@ -262,15 +268,16 @@ export default function NameInputModal({
           visible={showToast}
           onHide={() => setShowToast(false)}
         />
-        <Animated.View
-          className="flex-1 items-center justify-center p-4"
-          style={{
-            backgroundColor: `rgba(0, 0, 0, ${backdropAnim.interpolate({
-              inputRange: [0, 1],
-              outputRange: [0, 0.5],
-            })})`,
-          }}
-        >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <Animated.View
+            className="flex-1 items-center justify-center p-4"
+            style={{
+              backgroundColor: `rgba(0, 0, 0, ${backdropAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0, 0.5],
+              })})`,
+            }}
+          >
           <Animated.View
             className="w-11/12 rounded-2xl p-6"
             style={{
@@ -431,7 +438,8 @@ export default function NameInputModal({
               />
             </Animated.View>
           </Animated.View>
-        </Animated.View>
+          </Animated.View>
+        </TouchableWithoutFeedback>
       </SafeAreaView>
     </Modal>
   );
