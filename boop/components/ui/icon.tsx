@@ -12,7 +12,8 @@ export type IconName =
   | "edit"
   | "palette"
   | "heart"
-  | "arrow-back";
+  | "arrow-back"
+  | "lock-closed";
 
 interface IconProps {
   name: IconName;
@@ -45,6 +46,8 @@ export default function Icon({ name, size = 24, color = "#000" }: IconProps) {
         return "heart-outline";
       case "arrow-back":
         return "arrow-back-outline";
+      case "lock-closed":
+        return "lock-closed-outline";
       default:
         return "help-outline";
     }

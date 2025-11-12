@@ -15,6 +15,7 @@ import { DeviceService } from "@/lib/deviceService";
 import { Device } from "@/lib/supabase";
 import { useTheme } from "@/lib/themeContext";
 import PairingModal from "./pairing-modal";
+// import DonateModal from "./donate-modal"; // Commented out - coming soon
 import Icon from "./ui/icon";
 import Button from "./ui/button";
 import Toast from "./ui/toast";
@@ -36,6 +37,7 @@ export default function SettingsModal({
   const [isLoading, setIsLoading] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
   const [showPairingModal, setShowPairingModal] = useState(false);
+  // const [showDonateModal, setShowDonateModal] = useState(false); // Commented out - coming soon
   const [isEditingName, setIsEditingName] = useState(false);
   const [newName, setNewName] = useState("");
   const [currentDevice, setCurrentDevice] = useState<{
@@ -509,13 +511,7 @@ export default function SettingsModal({
                     </Text>
                   </Pressable>
                   <Pressable
-                    onPress={() => {
-                      // Placeholder for donate functionality
-                      Alert.alert(
-                        "Donate",
-                        "Donation feature coming soon! Thank you for your support."
-                      );
-                    }}
+                    onPress={() => Alert.alert("Donations Coming Soon", "Donations will be available soon! 🎉")}
                     className="rounded-lg px-4 py-2 items-center justify-center min-w-[80px]"
                     style={({ pressed }) => ({
                       opacity: pressed ? 0.8 : 1,
@@ -541,6 +537,12 @@ export default function SettingsModal({
         visible={showPairingModal}
         onClose={handlePairingComplete}
       />
+
+      {/* DonateModal commented out - coming soon */}
+      {/* <DonateModal
+        visible={showDonateModal}
+        onClose={() => setShowDonateModal(false)}
+      /> */}
     </>
   );
 }

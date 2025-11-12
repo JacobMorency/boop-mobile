@@ -9,6 +9,7 @@ import Toast from "@/components/ui/toast";
 import { DeviceService } from "@/lib/deviceService";
 import { PushNotificationService } from "@/lib/pushNotificationService";
 import { ThemeService } from "@/lib/themeService";
+// import { PurchaseService } from "@/lib/purchaseService"; // Commented out - IAP disabled for now
 import { useTheme } from "@/lib/themeContext";
 import { Device } from "@/lib/supabase";
 
@@ -38,6 +39,7 @@ export default function Index() {
   const initializeApp = async () => {
     await DeviceService.initialize();
     await ThemeService.initialize();
+    // await PurchaseService.initialize(); // Initialize IAP - Commented out for now
     setupNotifications();
     await loadPairedDevice();
 

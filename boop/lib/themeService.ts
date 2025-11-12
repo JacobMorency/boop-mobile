@@ -1,6 +1,17 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { PRODUCT_IDS } from "./purchaseService";
 
 export type ThemeName = "lilac" | "blue" | "green" | "pink" | "orange" | "purple";
+
+// Map theme names to product IDs
+export const THEME_PRODUCT_IDS: Record<ThemeName, string | null> = {
+  lilac: null, // Free theme
+  blue: PRODUCT_IDS.THEME_BLUE,
+  green: PRODUCT_IDS.THEME_GREEN,
+  pink: PRODUCT_IDS.THEME_PINK,
+  orange: PRODUCT_IDS.THEME_ORANGE,
+  purple: PRODUCT_IDS.THEME_PURPLE,
+};
 
 export interface Theme {
   name: ThemeName;
@@ -249,6 +260,11 @@ export class ThemeService {
     return () => {
       this.listeners.delete(listener);
     };
+  }
+
+  // Get product ID for a theme
+  static getThemeProductId(themeName: ThemeName): string | null {
+    return THEME_PRODUCT_IDS[themeName] || null;
   }
 }
 
