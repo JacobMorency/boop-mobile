@@ -1,0 +1,38 @@
+name: Tests
+
+on:
+  pull_request:
+    branches: [main, master]
+  push:
+    branches: [main, master]
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: boop/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./boop
+        run: npm ci
+
+      - name: Run tests
+        working-directory: ./boop
+        run: npm test -- --coverage --ci
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        with:
+          directory: ./boop/coverage
+          fail_ci_if_error: false
+
