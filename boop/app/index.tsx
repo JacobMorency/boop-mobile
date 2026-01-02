@@ -10,9 +10,10 @@ import Toast from "@/components/ui/toast";
 import { DeviceService } from "@/lib/deviceService";
 import { PushNotificationService } from "@/lib/pushNotificationService";
 import { ThemeService } from "@/lib/themeService";
-// import { PurchaseService } from "@/lib/purchaseService"; // Commented out - IAP disabled for now
 import { useTheme } from "@/lib/themeContext";
 import { Device } from "@/lib/supabase";
+import { useConnectionAnimation } from "@/hooks/useConnectionAnimation";
+import { useButtonAnimations } from "@/hooks/useButtonAnimations";
 
 export default function Index() {
   const { theme } = useTheme();
@@ -23,25 +24,64 @@ export default function Index() {
   const [toastMessage, setToastMessage] = useState("");
   const [toastType, setToastType] = useState<"error" | "success" | "info">("error");
   const [showToast, setShowToast] = useState(false);
+  const [rateLimitError, setRateLimitError] = useState<string | null>(null);
 
-  // Animation refs
-  const connectionSlideAnim = useRef(new Animated.Value(-50)).current;
-  const connectionOpacityAnim = useRef(new Animated.Value(0)).current;
-  const dotPulseAnim = useRef(new Animated.Value(1)).current;
+  // Animation hooks
+  const {
+    connectionSlideAnim,
+    connectionOpacityAnim,
+    dotPulseAnim,
+  } = useConnectionAnimation(pairedDevice !== null);
+
+  const {
+    boopButtonPulseAnim,
+    boopButtonGlowAnim,
+    triggerBoopReceptionAnimation,
+  } = useButtonAnimations();
+
+  // Helper text animations
   const helperTextAnim = useRef(new Animated.Value(0)).current;
   const helperTextSlideAnim = useRef(new Animated.Value(20)).current;
-  const boopButtonPulseAnim = useRef(new Animated.Value(1)).current;
-  const boopButtonGlowAnim = useRef(new Animated.Value(0)).current;
+
+  const notificationCleanupRef = useRef<(() => void) | null>(null);
+  const rateLimitTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Clear rate limit error after timeout
+  useEffect(() => {
+    if (rateLimitError) {
+      if (rateLimitTimeoutRef.current) {
+        clearTimeout(rateLimitTimeoutRef.current);
+      }
+      rateLimitTimeoutRef.current = setTimeout(() => {
+        setRateLimitError(null);
+        rateLimitTimeoutRef.current = null;
+      }, 5000);
+    }
+
+    return () => {
+      if (rateLimitTimeoutRef.current) {
+        clearTimeout(rateLimitTimeoutRef.current);
+        rateLimitTimeoutRef.current = null;
+      }
+    };
+  }, [rateLimitError]);
 
   // Initialize device service and notifications on app start
   useEffect(() => {
     initializeApp();
+
+    // Cleanup function
+    return () => {
+      // Notification cleanup
+      if (notificationCleanupRef.current) {
+        notificationCleanupRef.current();
+      }
+    };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const initializeApp = async () => {
     await DeviceService.initialize();
     await ThemeService.initialize();
-    // await PurchaseService.initialize(); // Initialize IAP - Commented out for now
     setupNotifications();
     await loadPairedDevice();
 
@@ -56,47 +96,12 @@ export default function Index() {
   const loadPairedDevice = async () => {
     try {
       const device = await DeviceService.getPairedDevice();
-      const wasPaired = pairedDevice !== null;
       const isNowPaired = device !== null;
 
       setPairedDevice(device);
 
-      // Animate connection status changes
-      if (isNowPaired && !wasPaired) {
-        // Just connected - slide in with bounce
-        Animated.parallel([
-          Animated.spring(connectionSlideAnim, {
-            toValue: 0,
-            tension: 100,
-            friction: 8,
-            useNativeDriver: true,
-          }),
-          Animated.timing(connectionOpacityAnim, {
-            toValue: 1,
-            duration: 300,
-            useNativeDriver: true,
-          }),
-        ]).start();
-
-        // Start pulsing dot animation
-        startDotPulse();
-      } else if (!isNowPaired && wasPaired) {
-        // Just disconnected - fade out
-        Animated.parallel([
-          Animated.timing(connectionSlideAnim, {
-            toValue: -50,
-            duration: 300,
-            useNativeDriver: true,
-          }),
-          Animated.timing(connectionOpacityAnim, {
-            toValue: 0,
-            duration: 300,
-            useNativeDriver: true,
-          }),
-        ]).start();
-      }
-
-      // Animate helper text
+      // Animate helper text based on pairing status
+      // Connection animations are handled by useConnectionAnimation hook
       if (!isNowPaired) {
         Animated.parallel([
           Animated.timing(helperTextAnim, {
@@ -130,58 +135,6 @@ export default function Index() {
     }
   };
 
-  const startDotPulse = () => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(dotPulseAnim, {
-          toValue: 1.3,
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(dotPulseAnim, {
-          toValue: 1,
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
-  };
-
-  const triggerBoopReceptionAnimation = () => {
-    // Haptic feedback
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-
-    // Pulse animation - scale up and down
-    Animated.sequence([
-      Animated.parallel([
-        Animated.spring(boopButtonPulseAnim, {
-          toValue: 1.15,
-          tension: 200,
-          friction: 5,
-          useNativeDriver: true,
-        }),
-        Animated.timing(boopButtonGlowAnim, {
-          toValue: 1,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-      ]),
-      Animated.parallel([
-        Animated.spring(boopButtonPulseAnim, {
-          toValue: 1,
-          tension: 200,
-          friction: 5,
-          useNativeDriver: true,
-        }),
-        Animated.timing(boopButtonGlowAnim, {
-          toValue: 0,
-          duration: 400,
-          useNativeDriver: true,
-        }),
-      ]),
-    ]).start();
-  };
-
   const showToastMessage = (message: string, type: "error" | "success" | "info" = "error") => {
     setToastMessage(message);
     setToastType(type);
@@ -213,8 +166,8 @@ export default function Index() {
         }
       );
 
-    // Cleanup listeners on unmount
-    return () => {
+    // Store cleanup function
+    notificationCleanupRef.current = () => {
       notificationListener.remove();
       responseListener.remove();
     };
@@ -231,28 +184,37 @@ export default function Index() {
         visible={showToast}
         onHide={() => setShowToast(false)}
       />
-      {/* Connection Status - Animated indicator */}
+      {/* Connection Status - Refined animated indicator */}
       <Animated.View
-        className="absolute top-12 left-6 z-10"
+        className="absolute z-10"
         style={{
+          top: 48, // Using theme spacing equivalent (12 * 4 = 48)
+          left: 24, // Using theme spacing equivalent (6 * 4 = 24)
           opacity: connectionOpacityAnim,
           transform: [{ translateY: connectionSlideAnim }],
         }}
       >
         <View 
-          className="flex-row items-center rounded-full px-2 py-1"
-          style={{ backgroundColor: theme.colors.bg.light }}
+          className="flex-row items-center rounded-full px-3 py-1.5"
+          style={{ 
+            backgroundColor: theme.colors.bg.light,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.1,
+            shadowRadius: 2,
+            elevation: 2,
+          }}
         >
           <Animated.View
-            className="w-2 h-2 rounded-full mr-2"
+            className="w-2.5 h-2.5 rounded-full mr-2"
             style={{
               transform: [{ scale: dotPulseAnim }],
               backgroundColor: theme.colors.success,
             }}
           />
           <Text 
-            className="text-xs font-medium"
-            style={{ color: theme.colors.text.muted }}
+            className="text-xs font-semibold"
+            style={{ color: theme.colors.text.DEFAULT }}
           >
             {pairedDevice?.name || pairedDevice?.code}
           </Text>
@@ -281,7 +243,19 @@ export default function Index() {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
               setIsSettingsVisible(true);
             }}
-            onError={(message) => showToastMessage(message, "error")}
+            onError={(message) => {
+              // Handle rate limit errors - show on button with pulse
+              if (message.includes("Rate limit") || message.includes("too fast")) {
+                setRateLimitError(message);
+                // Clear after 5 seconds - using useEffect would be better but this is simpler for now
+                // The error will clear when user tries again or component unmounts
+              } else {
+                // Show toast for other errors
+                showToastMessage(message, "error");
+              }
+            }}
+            isPaired={pairedDevice !== null}
+            rateLimitError={rateLimitError}
           />
         </Animated.View>
 

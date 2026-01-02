@@ -86,9 +86,10 @@ export default function NameInputModal({
       }),
     ]).start();
 
-    // Staggered content animations
-    setTimeout(() => {
-      // Title slide in
+    // Staggered content animations using Animated.delay()
+    // Title slide in
+    Animated.sequence([
+      Animated.delay(100),
       Animated.parallel([
         Animated.spring(titleSlideAnim, {
           toValue: 0,
@@ -101,20 +102,22 @@ export default function NameInputModal({
           duration: 300,
           useNativeDriver: true,
         }),
-      ]).start();
-    }, 100);
+      ]),
+    ]).start();
 
-    setTimeout(() => {
-      // Description fade in
+    // Description fade in
+    Animated.sequence([
+      Animated.delay(200),
       Animated.timing(descriptionOpacityAnim, {
         toValue: 1,
         duration: 300,
         useNativeDriver: true,
-      }).start();
-    }, 200);
+      }),
+    ]).start();
 
-    setTimeout(() => {
-      // Code box scale in with bounce
+    // Code box scale in with bounce
+    Animated.sequence([
+      Animated.delay(300),
       Animated.parallel([
         Animated.spring(codeScaleAnim, {
           toValue: 1,
@@ -127,11 +130,12 @@ export default function NameInputModal({
           duration: 300,
           useNativeDriver: true,
         }),
-      ]).start();
-    }, 300);
+      ]),
+    ]).start();
 
-    setTimeout(() => {
-      // Input slide up
+    // Input slide up
+    Animated.sequence([
+      Animated.delay(400),
       Animated.parallel([
         Animated.spring(inputSlideAnim, {
           toValue: 0,
@@ -144,17 +148,18 @@ export default function NameInputModal({
           duration: 300,
           useNativeDriver: true,
         }),
-      ]).start();
-    }, 400);
+      ]),
+    ]).start();
 
-    setTimeout(() => {
-      // Button fade in
+    // Button fade in
+    Animated.sequence([
+      Animated.delay(500),
       Animated.timing(buttonOpacityAnim, {
         toValue: 1,
         duration: 300,
         useNativeDriver: true,
-      }).start();
-    }, 500);
+      }),
+    ]).start();
   };
 
   const resetAnimations = () => {
@@ -215,14 +220,15 @@ export default function NameInputModal({
 
       Clipboard.setString(deviceCode);
 
-      // Reset after 2 seconds
-      setTimeout(() => {
+      // Reset after 2 seconds using Animated.delay()
+      Animated.sequence([
+        Animated.delay(2000),
         Animated.timing(copyButtonTextAnim, {
           toValue: 0,
           duration: 200,
           useNativeDriver: true,
-        }).start();
-      }, 2000);
+        }),
+      ]).start();
     } catch (error) {
       showToastMessage("Failed to copy code", "error");
       console.error(error);

@@ -81,12 +81,16 @@ export default function Toast({
     }
   };
 
+  // Position toast below connection indicator (48px top + ~40px height + 16px spacing = 104px)
+  // Using theme spacing: connection indicator at 48px, add 40px for indicator height, 16px spacing
+  const toastTop = 104; // Calculated to avoid connection indicator
+
   return (
     <Animated.View
       style={{
         position: "absolute",
-        top: 100, // Moved down to avoid connection status indicator
-        left: 16,
+        top: toastTop,
+        left: 16, // Using standard spacing (4 * 4 = 16)
         right: 16,
         zIndex: 9999,
         transform: [{ translateY: slideAnim }],

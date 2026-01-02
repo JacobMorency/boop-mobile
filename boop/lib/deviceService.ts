@@ -2,6 +2,7 @@ import { supabase, Device, Pair } from "./supabase";
 import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { PushNotificationService } from "./pushNotificationService";
+import { handleError, isNetworkError } from "./errorHandler";
 
 export class DeviceService {
   private static deviceId: string | null = null;
@@ -43,13 +44,12 @@ export class DeviceService {
       const expoPushToken =
         await PushNotificationService.registerForPushNotifications();
 
-      // Try to insert with name first, fallback to without name if column doesn't exist
-      let insertData: any = {
+      // Insert device with name
+      const insertData: any = {
         expo_push_token: expoPushToken,
         platform: Platform.OS as "ios" | "android" | "web",
       };
       
-      // Only include name if we have a value (will fail gracefully if column doesn't exist)
       if (name) {
         insertData.name = name;
       }
@@ -61,55 +61,12 @@ export class DeviceService {
         .single();
 
       if (error) {
-        // If error is about missing name column, try again without name
-        const errorMessage = error.message || String(error);
-        if (errorMessage.includes("name") && errorMessage.includes("column") && name) {
-          console.warn(
-            "Database schema missing 'name' column. Inserting without name. Please run: add-name-migration.sql"
-          );
-          // Retry without name
-          const { data: retryData, error: retryError } = await supabase
-            .from("devices")
-            .insert({
-              expo_push_token: expoPushToken,
-              platform: Platform.OS as "ios" | "android" | "web",
-            })
-            .select()
-            .single();
-          
-          if (retryError) {
-            console.error("Failed to register device (retry):", retryError);
-            return { success: false, error: "Failed to register device" };
-          }
-          
-          // Use retryData and set name locally
-          this.deviceId = retryData.id;
-          this.deviceCode = retryData.code;
-          this.deviceName = name || "Anonymous";
-          
-          await AsyncStorage.setItem(
-            this.STORAGE_KEY,
-            JSON.stringify({
-              deviceId: this.deviceId,
-              code: this.deviceCode,
-              name: this.deviceName,
-            })
-          );
-          
-          return {
-            success: true,
-            deviceId: this.deviceId,
-            code: this.deviceCode,
-            name: this.deviceName,
-          };
-        }
-        console.error("Failed to register device:", error);
-        return { success: false, error: "Failed to register device" };
+        const appError = handleError(error);
+        return { success: false, error: appError.userMessage };
       }
 
       this.deviceId = data.id;
       this.deviceCode = data.code;
-      // Handle case where name column might not exist (graceful fallback)
       this.deviceName = data.name || name || "Anonymous";
 
       // Store device info locally
@@ -397,8 +354,8 @@ export class DeviceService {
       });
 
       if (error) {
-        console.error("Failed to send boop:", error);
-        return { success: false, error: "Failed to send boop" };
+        const appError = handleError(error);
+        return { success: false, error: appError.userMessage };
       }
 
       // Send push notification if the paired device has a push token
@@ -411,15 +368,18 @@ export class DeviceService {
             "I'm thinking of you! 💭"
           );
         } catch (pushError) {
-          console.error("Failed to send push notification:", pushError);
           // Don't fail the boop if push notification fails
+          // Log for debugging but don't surface to user
+          if (__DEV__) {
+            console.error("Failed to send push notification:", pushError);
+          }
         }
       }
 
       return { success: true };
     } catch (error) {
-      console.error("Failed to send boop:", error);
-      return { success: false, error: "Failed to send boop" };
+      const appError = handleError(error);
+      return { success: false, error: appError.userMessage };
     }
   }
 

@@ -58,10 +58,13 @@ export default function PairingModal({ visible, onClose }: PairingModalProps) {
   useEffect(() => {
     if (visible) {
       loadDeviceCode();
-      // Auto-focus input after a short delay
-      setTimeout(() => {
-        inputRef.current?.focus();
-      }, 300);
+      // Auto-focus input after modal animation completes
+      // Use requestAnimationFrame to ensure modal is fully rendered
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          inputRef.current?.focus();
+        });
+      });
     } else {
       // Reset state when modal closes
       setOtherCode("");
@@ -105,10 +108,11 @@ export default function PairingModal({ visible, onClose }: PairingModalProps) {
 
       if (pairResult.success) {
         showToastMessage("Devices paired successfully!", "success");
-        // Close modal after a short delay to show success toast
-        setTimeout(() => {
-          onClose();
-        }, 1500);
+        // Close modal after toast is shown - use state to track when to close
+        // The toast will auto-hide after its duration, then we close
+        // For now, we'll close immediately after showing success toast
+        // The toast component handles its own timing
+        onClose();
       } else {
         showToastMessage(
           pairResult.error ||

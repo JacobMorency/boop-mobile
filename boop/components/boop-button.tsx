@@ -7,9 +7,11 @@ import { useTheme } from "@/lib/themeContext";
 export type BoopButtonProps = {
   onLongPress?: () => void;
   onError?: (message: string) => void;
+  isPaired?: boolean;
+  rateLimitError?: string | null;
 };
 
-export default function BoopButton({ onLongPress, onError }: BoopButtonProps) {
+export default function BoopButton({ onLongPress, onError, isPaired = false, rateLimitError }: BoopButtonProps) {
   const { theme } = useTheme();
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const shadowAnim = useRef(new Animated.Value(0.3)).current;
@@ -20,43 +22,128 @@ export default function BoopButton({ onLongPress, onError }: BoopButtonProps) {
   const rotationAnim = useRef(new Animated.Value(0)).current;
   const rippleAnim = useRef(new Animated.Value(0)).current;
 
+  const breathingAnimationRef = useRef<Animated.CompositeAnimation | null>(null);
+  const glowAnimationRef = useRef<Animated.CompositeAnimation | null>(null);
+  const readyGlowAnim = useRef(new Animated.Value(0.3)).current;
+  const rateLimitPulseAnim = useRef(new Animated.Value(1)).current;
+  const rateLimitPulseRef = useRef<Animated.CompositeAnimation | null>(null);
+
   // Start breathing animation on mount
   useEffect(() => {
-    const startBreathing = () => {
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(breathingAnim, {
-            toValue: 1.05,
-            duration: 2000,
-            useNativeDriver: true,
-          }),
-          Animated.timing(breathingAnim, {
-            toValue: 1,
-            duration: 2000,
-            useNativeDriver: true,
-          }),
-        ])
-      ).start();
+    // Stop any existing animations
+    if (breathingAnimationRef.current) {
+      breathingAnimationRef.current.stop();
+    }
+    if (glowAnimationRef.current) {
+      glowAnimationRef.current.stop();
+    }
 
-      // Synchronized glow animation
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(glowAnim, {
-            toValue: 0.6,
-            duration: 2000,
-            useNativeDriver: true,
-          }),
-          Animated.timing(glowAnim, {
-            toValue: 0.3,
-            duration: 2000,
-            useNativeDriver: true,
-          }),
-        ])
-      ).start();
+    const breathingAnimation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(breathingAnim, {
+          toValue: 1.05,
+          duration: 2000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(breathingAnim, {
+          toValue: 1,
+          duration: 2000,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    breathingAnimationRef.current = breathingAnimation;
+    breathingAnimation.start();
+
+    // Synchronized glow animation
+    const glowAnimation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(glowAnim, {
+          toValue: 0.6,
+          duration: 2000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(glowAnim, {
+          toValue: 0.3,
+          duration: 2000,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    glowAnimationRef.current = glowAnimation;
+    glowAnimation.start();
+
+    // Cleanup on unmount
+    return () => {
+      if (breathingAnimationRef.current) {
+        breathingAnimationRef.current.stop();
+        breathingAnimationRef.current = null;
+      }
+      if (glowAnimationRef.current) {
+        glowAnimationRef.current.stop();
+        glowAnimationRef.current = null;
+      }
     };
-
-    startBreathing();
   }, [breathingAnim, glowAnim]);
+
+  // Enhanced glow when paired and ready
+  useEffect(() => {
+    if (isPaired && !rateLimitError) {
+      // Increase base glow when ready
+      Animated.timing(readyGlowAnim, {
+        toValue: 0.5,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    } else {
+      Animated.timing(readyGlowAnim, {
+        toValue: 0.3,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [isPaired, rateLimitError]);
+
+  // Subtle pulse animation when rate limited
+  useEffect(() => {
+    if (rateLimitError) {
+      // Stop any existing pulse
+      if (rateLimitPulseRef.current) {
+        rateLimitPulseRef.current.stop();
+      }
+
+      const pulseAnimation = Animated.loop(
+        Animated.sequence([
+          Animated.timing(rateLimitPulseAnim, {
+            toValue: 0.95,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+          Animated.timing(rateLimitPulseAnim, {
+            toValue: 1,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      rateLimitPulseRef.current = pulseAnimation;
+      pulseAnimation.start();
+    } else {
+      // Stop pulse and reset
+      if (rateLimitPulseRef.current) {
+        rateLimitPulseRef.current.stop();
+        rateLimitPulseRef.current = null;
+      }
+      rateLimitPulseAnim.setValue(1);
+    }
+
+    return () => {
+      if (rateLimitPulseRef.current) {
+        rateLimitPulseRef.current.stop();
+        rateLimitPulseRef.current = null;
+      }
+    };
+  }, [rateLimitError]);
 
   const handleBoop = async () => {
     // Haptic feedback for press
@@ -95,7 +182,25 @@ export default function BoopButton({ onLongPress, onError }: BoopButtonProps) {
       if (result.success) {
         // Success haptic feedback
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        // Subtle inline confirmation: fade in, delay, fade out
+        
+        // Enhanced success animation: scale bounce + text animation
+        // First, add a subtle scale bounce to the button
+        Animated.sequence([
+          Animated.spring(scaleAnim, {
+            toValue: 1.1,
+            tension: 200,
+            friction: 4,
+            useNativeDriver: true,
+          }),
+          Animated.spring(scaleAnim, {
+            toValue: 1,
+            tension: 200,
+            friction: 4,
+            useNativeDriver: true,
+          }),
+        ]).start();
+
+        // Subtle inline confirmation: fade in with upward motion, delay, fade out
         Animated.sequence([
           Animated.timing(successOpacity, {
             toValue: 1,
@@ -111,6 +216,7 @@ export default function BoopButton({ onLongPress, onError }: BoopButtonProps) {
         ]).start();
       } else {
         // Show error message (rate limit or other error)
+        // Rate limit errors will be handled by parent component for better UX
         onError?.(result.error || "Failed to send boop");
       }
     } catch (error) {
@@ -202,11 +308,14 @@ export default function BoopButton({ onLongPress, onError }: BoopButtonProps) {
       <Animated.View
         style={{
           transform: [
-            { scale: Animated.multiply(scaleAnim, breathingAnim) },
+            { scale: Animated.multiply(scaleAnim, Animated.multiply(breathingAnim, rateLimitPulseAnim)) },
             { rotate: rotation },
           ],
-          shadowOpacity: Animated.multiply(shadowAnim, glowAnim),
-          shadowColor: theme.colors.primary,
+          shadowOpacity: Animated.multiply(
+            shadowAnim,
+            Animated.multiply(glowAnim, readyGlowAnim)
+          ),
+          shadowColor: rateLimitError ? theme.colors.danger : theme.colors.primary,
           shadowOffset: {
             width: 0,
             height: 8,
@@ -272,22 +381,33 @@ export default function BoopButton({ onLongPress, onError }: BoopButtonProps) {
         </Pressable>
       </Animated.View>
 
-      {/* Subtle inline confirmation */}
+      {/* Enhanced inline confirmation with upward motion */}
       <Animated.View
         style={{
-          marginTop: 12,
+          marginTop: 24, // Increased from 12 to 24 for better spacing
           opacity: successOpacity,
           transform: [
             {
               translateY: successOpacity.interpolate({
                 inputRange: [0, 1],
-                outputRange: [4, 0],
+                outputRange: [8, -4],
+              }),
+            },
+            {
+              scale: successOpacity.interpolate({
+                inputRange: [0, 0.5, 1],
+                outputRange: [0.8, 1.1, 1],
               }),
             },
           ],
         }}
       >
-        <Text className="text-sm text-text-muted">Booped!</Text>
+        <Text 
+          className="text-sm font-semibold"
+          style={{ color: theme.colors.success }}
+        >
+          Booped!
+        </Text>
       </Animated.View>
     </View>
   );

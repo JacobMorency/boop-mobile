@@ -102,8 +102,9 @@ export default function WelcomeModal({
       useNativeDriver: true,
     }).start();
 
-    // Text slide up and fade in
-    setTimeout(() => {
+    // Text slide up and fade in using Animated.delay()
+    Animated.sequence([
+      Animated.delay(100),
       Animated.parallel([
         Animated.spring(textSlideAnim, {
           toValue: 0,
@@ -116,8 +117,8 @@ export default function WelcomeModal({
           duration: 300,
           useNativeDriver: true,
         }),
-      ]).start();
-    }, 100);
+      ]),
+    ]).start();
   };
 
   const resetAnimations = () => {

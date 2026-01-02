@@ -17,7 +17,6 @@ import { DeviceService } from "@/lib/deviceService";
 import { Device } from "@/lib/supabase";
 import { useTheme } from "@/lib/themeContext";
 import PairingModal from "./pairing-modal";
-// import DonateModal from "./donate-modal"; // Commented out - coming soon
 import Icon from "./ui/icon";
 import Button from "./ui/button";
 import Toast from "./ui/toast";
@@ -39,7 +38,6 @@ export default function SettingsModal({
   const [isLoading, setIsLoading] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
   const [showPairingModal, setShowPairingModal] = useState(false);
-  // const [showDonateModal, setShowDonateModal] = useState(false); // Commented out - coming soon
   const [isEditingName, setIsEditingName] = useState(false);
   const [newName, setNewName] = useState("");
   const [currentDevice, setCurrentDevice] = useState<{
@@ -103,14 +101,15 @@ export default function SettingsModal({
 
       Clipboard.setString(currentDevice.code);
 
-      // Reset after 2 seconds
-      setTimeout(() => {
+      // Reset after 2 seconds using Animated.delay()
+      Animated.sequence([
+        Animated.delay(2000),
         Animated.timing(copyButtonTextAnim, {
           toValue: 0,
           duration: 200,
           useNativeDriver: true,
-        }).start();
-      }, 2000);
+        }),
+      ]).start();
     } catch (error) {
       showToastMessage("Failed to copy code", "error");
       console.error(error);
@@ -187,10 +186,12 @@ export default function SettingsModal({
 
   const handleOpenThemePicker = () => {
     onClose(); // Close settings modal first
-    // Small delay to ensure settings modal closes before navigating
-    setTimeout(() => {
-      router.push("/theme");
-    }, 300);
+    // Use requestAnimationFrame to ensure modal closes before navigating
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        router.push("/theme");
+      });
+    });
   };
 
   const handleEditName = () => {
@@ -584,12 +585,6 @@ export default function SettingsModal({
         visible={showPairingModal}
         onClose={handlePairingComplete}
       />
-
-      {/* DonateModal commented out - coming soon */}
-      {/* <DonateModal
-        visible={showDonateModal}
-        onClose={() => setShowDonateModal(false)}
-      /> */}
     </>
   );
 }

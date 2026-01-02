@@ -58,10 +58,9 @@ export default function DonateModal({ visible, onClose }: DonateModalProps) {
 
       if (result.success) {
         showToastMessage("Thank you for your support! ❤️", "success");
-        // Close modal after a short delay
-        setTimeout(() => {
-          onClose();
-        }, 2000);
+        // Close modal after toast is shown - toast handles its own timing
+        // For now, close immediately after showing success
+        onClose();
       } else {
         showToastMessage(result.error || "Failed to process donation", "error");
       }
