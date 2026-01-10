@@ -16,6 +16,7 @@ import Constants from "expo-constants";
 import { DeviceService } from "@/lib/deviceService";
 import { Device } from "@/lib/supabase";
 import { useTheme } from "@/lib/themeContext";
+import { getModalBackdropColor } from "@/lib/themeService";
 import PairingModal from "./pairing-modal";
 import Icon from "./ui/icon";
 import Button from "./ui/button";
@@ -57,11 +58,42 @@ export default function SettingsModal({
   const copyButtonScaleAnim = useRef(new Animated.Value(1)).current;
   const copyButtonTextAnim = useRef(new Animated.Value(0)).current;
 
+  // Animation refs for modal entrance
+  const backdropAnim = useRef(new Animated.Value(0)).current;
+  const modalOpacityAnim = useRef(new Animated.Value(0)).current;
+  const modalScaleAnim = useRef(new Animated.Value(0.95)).current;
+
   // Load paired device when modal opens
   useEffect(() => {
     if (visible) {
       loadPairedDevice();
       loadCurrentDevice();
+      // Start entrance animation
+      Animated.parallel([
+        Animated.timing(backdropAnim, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.parallel([
+          Animated.timing(modalOpacityAnim, {
+            toValue: 1,
+            duration: 250,
+            useNativeDriver: true,
+          }),
+          Animated.spring(modalScaleAnim, {
+            toValue: 1,
+            tension: 100,
+            friction: 8,
+            useNativeDriver: true,
+          }),
+        ]),
+      ]).start();
+    } else {
+      // Reset animations
+      backdropAnim.setValue(0);
+      modalOpacityAnim.setValue(0);
+      modalScaleAnim.setValue(0.95);
     }
   }, [visible]);
 
@@ -230,7 +262,7 @@ export default function SettingsModal({
     <>
       <Modal
         visible={visible}
-        animationType="slide"
+        animationType="fade"
         transparent
         onRequestClose={onClose}
       >
@@ -241,17 +273,29 @@ export default function SettingsModal({
             visible={showToast}
             onHide={() => setShowToast(false)}
           />
-          <View
+          <Animated.View
             className="flex-1 items-center justify-center p-4"
-            style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
+            style={{
+              backgroundColor: getModalBackdropColor(theme, 0.88),
+              opacity: backdropAnim,
+            }}
           >
-            <View
-              className="w-11/12 rounded-2xl p-6"
-              style={{ backgroundColor: theme.colors.bg.light }}
+            <Animated.View
+              className="w-11/12 max-w-md rounded-3xl p-8"
+              style={{
+                opacity: modalOpacityAnim,
+                transform: [{ scale: modalScaleAnim }],
+                backgroundColor: theme.colors.bg.light,
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.1,
+                shadowRadius: 8,
+                elevation: 4,
+              }}
             >
               <View className="flex-row items-center justify-between mb-6">
                 <Text
-                  className="text-xl font-semibold"
+                  className="text-2xl font-semibold"
                   style={{ color: theme.colors.text.DEFAULT }}
                 >
                   Settings
@@ -272,7 +316,7 @@ export default function SettingsModal({
               </View>
 
               {/* Your Code */}
-              <View className="mb-6">
+              <View className="mb-8">
                 <Text
                   className="mb-2 text-sm font-medium"
                   style={{ color: theme.colors.text.muted }}
@@ -282,8 +326,6 @@ export default function SettingsModal({
                 <View
                   className="rounded-lg p-3"
                   style={{
-                    borderWidth: 1,
-                    borderColor: theme.colors.border.DEFAULT,
                     backgroundColor: theme.colors.bg.DEFAULT,
                   }}
                 >
@@ -353,7 +395,7 @@ export default function SettingsModal({
               </View>
 
               {/* Your Name */}
-              <View className="mb-6">
+              <View className="mb-8">
                 <Text
                   className="mb-2 text-sm font-medium"
                   style={{ color: theme.colors.text.muted }}
@@ -371,14 +413,12 @@ export default function SettingsModal({
                       autoCorrect={false}
                       className="rounded-lg px-3 py-2 text-base"
                       style={{
-                        borderWidth: 1,
-                        borderColor: theme.colors.border.DEFAULT,
                         backgroundColor: theme.colors.bg.DEFAULT,
                         color: theme.colors.text.DEFAULT,
                       }}
                       maxLength={50}
                     />
-                    <View className="flex-row mt-3" style={{ gap: 8 }}>
+                    <View className="flex-row mt-3" style={{ gap: 12 }}>
                       <Button
                         title="Save"
                         onPress={handleSaveName}
@@ -396,8 +436,6 @@ export default function SettingsModal({
                   <View
                     className="flex-row items-center justify-between rounded-lg p-3"
                     style={{
-                      borderWidth: 1,
-                      borderColor: theme.colors.border.DEFAULT,
                       backgroundColor: theme.colors.bg.DEFAULT,
                     }}
                   >
@@ -425,7 +463,7 @@ export default function SettingsModal({
               </View>
 
               {/* Connection Status */}
-              <View className="mb-6">
+              <View className="mb-8">
                 <Text
                   className="mb-2 text-sm font-medium"
                   style={{ color: theme.colors.text.muted }}
@@ -440,8 +478,6 @@ export default function SettingsModal({
                   <View
                     className="rounded-lg p-3"
                     style={{
-                      borderWidth: 1,
-                      borderColor: theme.colors.border.DEFAULT,
                       backgroundColor: theme.colors.bg.DEFAULT,
                     }}
                   >
@@ -469,8 +505,6 @@ export default function SettingsModal({
                   <View
                     className="rounded-lg p-3"
                     style={{
-                      borderWidth: 1,
-                      borderColor: theme.colors.border.DEFAULT,
                       backgroundColor: theme.colors.bg.DEFAULT,
                     }}
                   >
@@ -485,7 +519,7 @@ export default function SettingsModal({
               </View>
 
               {/* Action Buttons */}
-              <View>
+              <View className="gap-3">
                 {pairedDevice ? (
                   <Button
                     title={
@@ -496,13 +530,11 @@ export default function SettingsModal({
                     onPress={handleDisconnect}
                     disabled={isDisconnecting}
                     loading={isDisconnecting}
-                    className="mb-3"
                   />
                 ) : (
                   <Button
                     title="Pair with Partner"
                     onPress={handlePairNew}
-                    className="mb-3"
                   />
                 )}
 
@@ -576,8 +608,8 @@ export default function SettingsModal({
                   Version {Constants.expoConfig?.version || "1.1.1"}
                 </Text>
               </View>
-            </View>
-          </View>
+            </Animated.View>
+          </Animated.View>
         </SafeAreaView>
       </Modal>
 

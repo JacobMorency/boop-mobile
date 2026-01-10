@@ -412,3 +412,4 @@ export default function BoopButton({ onLongPress, onError, isPaired = false, rat
     </View>
   );
 }
+

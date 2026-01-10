@@ -6,10 +6,12 @@ import {
   TextInput,
   Keyboard,
   TouchableWithoutFeedback,
+  Animated,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { DeviceService } from "@/lib/deviceService";
 import { useTheme } from "@/lib/themeContext";
+import { getModalBackdropColor } from "@/lib/themeService";
 import Button from "@/components/ui/button";
 import Toast from "@/components/ui/toast";
 
@@ -30,6 +32,11 @@ export default function PairingModal({ visible, onClose }: PairingModalProps) {
   );
   const [showToast, setShowToast] = useState(false);
   const inputRef = useRef<TextInput>(null);
+
+  // Animation refs for modal entrance
+  const backdropAnim = useRef(new Animated.Value(0)).current;
+  const modalOpacityAnim = useRef(new Animated.Value(0)).current;
+  const modalScaleAnim = useRef(new Animated.Value(0.95)).current;
 
   const showToastMessage = useCallback(
     (message: string, type: "error" | "success" | "info" = "error") => {
@@ -58,17 +65,41 @@ export default function PairingModal({ visible, onClose }: PairingModalProps) {
   useEffect(() => {
     if (visible) {
       loadDeviceCode();
-      // Auto-focus input after modal animation completes
-      // Use requestAnimationFrame to ensure modal is fully rendered
-      requestAnimationFrame(() => {
+      // Start entrance animation
+      Animated.parallel([
+        Animated.timing(backdropAnim, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.parallel([
+          Animated.timing(modalOpacityAnim, {
+            toValue: 1,
+            duration: 250,
+            useNativeDriver: true,
+          }),
+          Animated.spring(modalScaleAnim, {
+            toValue: 1,
+            tension: 100,
+            friction: 8,
+            useNativeDriver: true,
+          }),
+        ]),
+      ]).start(() => {
+        // Auto-focus input after modal animation completes
         requestAnimationFrame(() => {
-          inputRef.current?.focus();
+          requestAnimationFrame(() => {
+            inputRef.current?.focus();
+          });
         });
       });
     } else {
-      // Reset state when modal closes
+      // Reset state and animations when modal closes
       setOtherCode("");
       setIsCodeValid(true);
+      backdropAnim.setValue(0);
+      modalOpacityAnim.setValue(0);
+      modalScaleAnim.setValue(0.95);
     }
   }, [visible, loadDeviceCode]);
 
@@ -130,7 +161,7 @@ export default function PairingModal({ visible, onClose }: PairingModalProps) {
   return (
     <Modal
       visible={visible}
-      animationType="slide"
+      animationType="fade"
       transparent
       onRequestClose={onClose}
     >
@@ -142,16 +173,28 @@ export default function PairingModal({ visible, onClose }: PairingModalProps) {
           onHide={() => setShowToast(false)}
         />
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-          <View
+          <Animated.View
             className="flex-1 items-center justify-center p-4"
-            style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
+            style={{
+              backgroundColor: getModalBackdropColor(theme, 0.88),
+              opacity: backdropAnim,
+            }}
           >
-            <View
-              className="w-11/12 rounded-2xl p-6"
-              style={{ backgroundColor: theme.colors.bg.light }}
+            <Animated.View
+              className="w-11/12 max-w-md rounded-3xl p-8"
+              style={{
+                opacity: modalOpacityAnim,
+                transform: [{ scale: modalScaleAnim }],
+                backgroundColor: theme.colors.bg.light,
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.1,
+                shadowRadius: 8,
+                elevation: 4,
+              }}
             >
               <Text
-                className="mb-4 text-xl font-semibold"
+                className="mb-6 text-2xl font-semibold"
                 style={{ color: theme.colors.text.DEFAULT }}
               >
                 Pairing
@@ -166,8 +209,6 @@ export default function PairingModal({ visible, onClose }: PairingModalProps) {
                 <View
                   className="rounded-lg px-3 py-2"
                   style={{
-                    borderWidth: 1,
-                    borderColor: theme.colors.border.DEFAULT,
                     backgroundColor: theme.colors.bg.DEFAULT,
                   }}
                 >
@@ -179,7 +220,7 @@ export default function PairingModal({ visible, onClose }: PairingModalProps) {
                   </Text>
                 </View>
               </View>
-              <View className="mb-6">
+              <View className="mb-8">
                 <Text
                   className="mb-1 text-sm"
                   style={{ color: theme.colors.text.muted }}
@@ -197,10 +238,8 @@ export default function PairingModal({ visible, onClose }: PairingModalProps) {
                   maxLength={6}
                   className="rounded-lg px-3 py-2 text-base"
                   style={{
-                    borderWidth: 1,
-                    borderColor: isCodeValid
-                      ? theme.colors.border.muted
-                      : theme.colors.danger,
+                    borderWidth: isCodeValid ? 0 : 1,
+                    borderColor: theme.colors.danger,
                     backgroundColor: theme.colors.bg.DEFAULT,
                     color: theme.colors.text.DEFAULT,
                   }}
@@ -214,7 +253,7 @@ export default function PairingModal({ visible, onClose }: PairingModalProps) {
                   </Text>
                 )}
               </View>
-              <View className="flex-row" style={{ gap: 12 }}>
+              <View className="flex-row gap-3">
                 <Button
                   title="Cancel"
                   onPress={onClose}
@@ -229,8 +268,8 @@ export default function PairingModal({ visible, onClose }: PairingModalProps) {
                   className="flex-1"
                 />
               </View>
-            </View>
-          </View>
+            </Animated.View>
+          </Animated.View>
         </TouchableWithoutFeedback>
       </SafeAreaView>
     </Modal>

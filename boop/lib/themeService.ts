@@ -268,3 +268,25 @@ export class ThemeService {
   }
 }
 
+/**
+ * Convert hex color to rgba with opacity
+ */
+function hexToRgba(hex: string, opacity: number): string {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  if (!result) {
+    return `rgba(0, 0, 0, ${opacity})`;
+  }
+  const r = parseInt(result[1], 16);
+  const g = parseInt(result[2], 16);
+  const b = parseInt(result[3], 16);
+  return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+}
+
+/**
+ * Get theme-aware backdrop color for modals
+ * Uses the theme's default background color with opacity for a lighter, integrated feel
+ */
+export function getModalBackdropColor(theme: Theme, opacity: number = 0.88): string {
+  return hexToRgba(theme.colors.bg.DEFAULT, opacity);
+}
+

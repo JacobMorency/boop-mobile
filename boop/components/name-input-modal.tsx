@@ -14,6 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import { DeviceService } from "@/lib/deviceService";
 import { useTheme } from "@/lib/themeContext";
+import { getModalBackdropColor } from "@/lib/themeService";
 import Button from "@/components/ui/button";
 import Icon from "@/components/ui/icon";
 import Toast from "@/components/ui/toast";
@@ -67,7 +68,7 @@ export default function NameInputModal({
     // Backdrop fade in
     Animated.timing(backdropAnim, {
       toValue: 1,
-      duration: 300,
+      duration: 200,
       useNativeDriver: true,
     }).start();
 
@@ -81,7 +82,7 @@ export default function NameInputModal({
       }),
       Animated.timing(modalOpacityAnim, {
         toValue: 1,
-        duration: 300,
+        duration: 250,
         useNativeDriver: true,
       }),
     ]).start();
@@ -261,37 +262,40 @@ export default function NameInputModal({
   };
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      transparent
-      onRequestClose={() => {}} // Prevent closing without name
-    >
-      <SafeAreaView className="flex-1">
-        <Toast
-          message={toastMessage}
-          type={toastType}
-          visible={showToast}
-          onHide={() => setShowToast(false)}
-        />
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-          <Animated.View
-            className="flex-1 items-center justify-center p-4"
-            style={{
-              backgroundColor: `rgba(0, 0, 0, ${backdropAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [0, 0.5],
-              })})`,
-            }}
-          >
-          <Animated.View
-            className="w-11/12 rounded-2xl p-6"
-            style={{
-              opacity: modalOpacityAnim,
-              transform: [{ scale: modalScaleAnim }],
-              backgroundColor: theme.colors.bg.light,
-            }}
-          >
+      <Modal
+        visible={visible}
+        animationType="fade"
+        transparent
+        onRequestClose={() => {}} // Prevent closing without name
+      >
+        <SafeAreaView className="flex-1">
+          <Toast
+            message={toastMessage}
+            type={toastType}
+            visible={showToast}
+            onHide={() => setShowToast(false)}
+          />
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <Animated.View
+              className="flex-1 items-center justify-center p-4"
+              style={{
+                backgroundColor: getModalBackdropColor(theme, 0.88),
+                opacity: backdropAnim,
+              }}
+            >
+            <Animated.View
+              className="w-11/12 max-w-md rounded-3xl p-8"
+              style={{
+                opacity: modalOpacityAnim,
+                transform: [{ scale: modalScaleAnim }],
+                backgroundColor: theme.colors.bg.light,
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.1,
+                shadowRadius: 8,
+                elevation: 4,
+              }}
+            >
             <Animated.View
               style={{
                 opacity: titleOpacityAnim,
@@ -299,7 +303,7 @@ export default function NameInputModal({
               }}
             >
               <Text 
-                className="mb-2 text-2xl font-bold"
+                className="mb-2 text-2xl font-semibold"
                 style={{ color: theme.colors.text.DEFAULT }}
               >
                 Welcome to Boop! 👋
@@ -312,7 +316,7 @@ export default function NameInputModal({
               }}
             >
               <Text 
-                className="mb-4 text-base"
+                className="mb-6 text-base"
                 style={{ color: theme.colors.text.muted }}
               >
                 Boop lets you send quick "thinking of you" notifications to a
@@ -324,12 +328,10 @@ export default function NameInputModal({
             {/* Your Pairing Code */}
             {deviceCode && (
               <Animated.View
-                className="mb-6 rounded-lg p-4"
+                className="mb-8 rounded-lg p-4"
                 style={{
                   opacity: codeOpacityAnim,
                   transform: [{ scale: codeScaleAnim }],
-                  borderWidth: 1,
-                  borderColor: theme.colors.border.DEFAULT,
                   backgroundColor: theme.colors.bg.DEFAULT,
                 }}
               >
@@ -420,8 +422,6 @@ export default function NameInputModal({
                 autoCorrect={false}
                 className="rounded-lg px-4 py-3 text-base"
                 style={{
-                  borderWidth: 1,
-                  borderColor: theme.colors.border.DEFAULT,
                   backgroundColor: theme.colors.bg.DEFAULT,
                   color: theme.colors.text.DEFAULT,
                 }}

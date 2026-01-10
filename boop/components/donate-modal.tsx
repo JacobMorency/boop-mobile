@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
-import { View, Text, Modal, Pressable } from "react-native";
+import { useState, useEffect, useRef } from "react";
+import { View, Text, Modal, Pressable, Animated } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { PurchaseService, PRODUCT_IDS } from "@/lib/purchaseService";
 import { useTheme } from "@/lib/themeContext";
+import { getModalBackdropColor } from "@/lib/themeService";
 import Icon from "./ui/icon";
 import Button from "./ui/button";
 import Toast from "./ui/toast";
@@ -20,10 +21,41 @@ export default function DonateModal({ visible, onClose }: DonateModalProps) {
   const [toastType, setToastType] = useState<"error" | "success" | "info">("error");
   const [showToast, setShowToast] = useState(false);
 
+  // Animation refs for modal entrance
+  const backdropAnim = useRef(new Animated.Value(0)).current;
+  const modalOpacityAnim = useRef(new Animated.Value(0)).current;
+  const modalScaleAnim = useRef(new Animated.Value(0.95)).current;
+
   useEffect(() => {
     if (visible) {
       loadProductPrices();
       PurchaseService.initialize();
+      // Start entrance animation
+      Animated.parallel([
+        Animated.timing(backdropAnim, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.parallel([
+          Animated.timing(modalOpacityAnim, {
+            toValue: 1,
+            duration: 250,
+            useNativeDriver: true,
+          }),
+          Animated.spring(modalScaleAnim, {
+            toValue: 1,
+            tension: 100,
+            friction: 8,
+            useNativeDriver: true,
+          }),
+        ]),
+      ]).start();
+    } else {
+      // Reset animations
+      backdropAnim.setValue(0);
+      modalOpacityAnim.setValue(0);
+      modalScaleAnim.setValue(0.95);
     }
   }, [visible]);
 
@@ -96,7 +128,7 @@ export default function DonateModal({ visible, onClose }: DonateModalProps) {
   return (
     <Modal
       visible={visible}
-      animationType="slide"
+      animationType="fade"
       transparent
       onRequestClose={onClose}
     >
@@ -107,17 +139,29 @@ export default function DonateModal({ visible, onClose }: DonateModalProps) {
           visible={showToast}
           onHide={() => setShowToast(false)}
         />
-        <View
+        <Animated.View
           className="flex-1 items-center justify-center p-4"
-          style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
+          style={{
+            backgroundColor: getModalBackdropColor(theme, 0.88),
+            opacity: backdropAnim,
+          }}
         >
-          <View
-            className="w-11/12 rounded-2xl p-6"
-            style={{ backgroundColor: theme.colors.bg.light }}
+          <Animated.View
+            className="w-11/12 max-w-md rounded-3xl p-8"
+            style={{
+              opacity: modalOpacityAnim,
+              transform: [{ scale: modalScaleAnim }],
+              backgroundColor: theme.colors.bg.light,
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.1,
+              shadowRadius: 8,
+              elevation: 4,
+            }}
           >
             <View className="flex-row items-center justify-between mb-6">
               <Text
-                className="text-xl font-semibold"
+                className="text-2xl font-semibold"
                 style={{ color: theme.colors.text.DEFAULT }}
               >
                 Support Boop
@@ -134,13 +178,13 @@ export default function DonateModal({ visible, onClose }: DonateModalProps) {
             </View>
 
             <Text
-              className="text-base mb-6 text-center"
+              className="text-base mb-8 text-center"
               style={{ color: theme.colors.text.muted }}
             >
               Thank you for considering a donation! Your support helps keep Boop free and simple.
             </Text>
 
-            <View className="gap-3">
+            <View className="gap-3 mb-8">
               {donationOptions.map((option) => {
                 const price = productPrices[option.id] || option.defaultPrice;
                 const isPurchasing = purchasingProduct === option.id;
@@ -161,15 +205,13 @@ export default function DonateModal({ visible, onClose }: DonateModalProps) {
               })}
             </View>
 
-            <View className="mt-6">
-              <Button
-                title="Cancel"
-                onPress={onClose}
-                variant="secondary"
-              />
-            </View>
-          </View>
-        </View>
+            <Button
+              title="Cancel"
+              onPress={onClose}
+              variant="secondary"
+            />
+          </Animated.View>
+        </Animated.View>
       </SafeAreaView>
     </Modal>
   );

@@ -3,6 +3,7 @@ import { View, Text, Modal, Animated, Pressable } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import { useTheme } from "@/lib/themeContext";
+import { getModalBackdropColor } from "@/lib/themeService";
 import Button from "@/components/ui/button";
 
 export type WelcomeModalProps = {
@@ -66,7 +67,7 @@ export default function WelcomeModal({
     // Backdrop fade in
     Animated.timing(backdropAnim, {
       toValue: 1,
-      duration: 300,
+      duration: 200,
       useNativeDriver: true,
     }).start();
 
@@ -80,7 +81,7 @@ export default function WelcomeModal({
       }),
       Animated.timing(contentOpacityAnim, {
         toValue: 1,
-        duration: 300,
+        duration: 250,
         useNativeDriver: true,
       }),
     ]).start(() => {
@@ -152,30 +153,33 @@ export default function WelcomeModal({
   const currentStepData = steps[currentStep];
 
   return (
-    <Modal
-      visible={visible}
-      animationType="none"
-      transparent
-      onRequestClose={handleSkip}
-    >
-      <SafeAreaView className="flex-1">
-        <Animated.View
-          className="flex-1 items-center justify-center p-6"
-          style={{
-            backgroundColor: `rgba(0, 0, 0, ${backdropAnim.interpolate({
-              inputRange: [0, 1],
-              outputRange: [0, 0.5],
-            })})`,
-          }}
-        >
+      <Modal
+        visible={visible}
+        animationType="fade"
+        transparent
+        onRequestClose={handleSkip}
+      >
+        <SafeAreaView className="flex-1">
           <Animated.View
-            className="w-full max-w-sm rounded-2xl p-8"
+            className="flex-1 items-center justify-center p-4"
             style={{
-              opacity: contentOpacityAnim,
-              transform: [{ scale: contentScaleAnim }],
-              backgroundColor: theme.colors.bg.light,
+              backgroundColor: getModalBackdropColor(theme, 0.88),
+              opacity: backdropAnim,
             }}
           >
+            <Animated.View
+              className="w-11/12 max-w-md rounded-3xl p-8"
+              style={{
+                opacity: contentOpacityAnim,
+                transform: [{ scale: contentScaleAnim }],
+                backgroundColor: theme.colors.bg.light,
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.1,
+                shadowRadius: 8,
+                elevation: 4,
+              }}
+            >
             {/* Step Indicator */}
             <View className="flex-row justify-center mb-4 gap-2">
               {steps.map((_, index) => (
@@ -211,7 +215,7 @@ export default function WelcomeModal({
               }}
             >
               <Text
-                className="text-2xl font-bold text-center mb-4"
+                className="text-2xl font-semibold text-center mb-4"
                 style={{ color: theme.colors.text.DEFAULT }}
               >
                 {currentStepData.title}
