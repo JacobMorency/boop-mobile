@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { View, Alert, Text, Animated } from "react-native";
+import { View, Text, Animated } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import BoopButton from "@/components/boop-button";
@@ -22,16 +22,15 @@ export default function Index() {
   const [showWelcome, setShowWelcome] = useState(false);
   const [showNameInput, setShowNameInput] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
-  const [toastType, setToastType] = useState<"error" | "success" | "info">("error");
+  const [toastType, setToastType] = useState<"error" | "success" | "info">(
+    "error"
+  );
   const [showToast, setShowToast] = useState(false);
   const [rateLimitError, setRateLimitError] = useState<string | null>(null);
 
   // Animation hooks
-  const {
-    connectionSlideAnim,
-    connectionOpacityAnim,
-    dotPulseAnim,
-  } = useConnectionAnimation(pairedDevice !== null);
+  const { connectionSlideAnim, connectionOpacityAnim, dotPulseAnim } =
+    useConnectionAnimation(pairedDevice !== null);
 
   const {
     boopButtonPulseAnim,
@@ -44,7 +43,9 @@ export default function Index() {
   const helperTextSlideAnim = useRef(new Animated.Value(20)).current;
 
   const notificationCleanupRef = useRef<(() => void) | null>(null);
-  const rateLimitTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const rateLimitTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  );
 
   // Clear rate limit error after timeout
   useEffect(() => {
@@ -135,7 +136,10 @@ export default function Index() {
     }
   };
 
-  const showToastMessage = (message: string, type: "error" | "success" | "info" = "error") => {
+  const showToastMessage = (
+    message: string,
+    type: "error" | "success" | "info" = "error"
+  ) => {
     setToastMessage(message);
     setToastType(type);
     setShowToast(true);
@@ -174,7 +178,7 @@ export default function Index() {
   };
 
   return (
-    <SafeAreaView 
+    <SafeAreaView
       className="flex-1"
       style={{ backgroundColor: theme.colors.bg.DEFAULT }}
     >
@@ -194,9 +198,9 @@ export default function Index() {
           transform: [{ translateY: connectionSlideAnim }],
         }}
       >
-        <View 
+        <View
           className="flex-row items-center rounded-full px-3 py-1.5"
-          style={{ 
+          style={{
             backgroundColor: theme.colors.bg.light,
             shadowColor: "#000",
             shadowOffset: { width: 0, height: 1 },
@@ -212,7 +216,7 @@ export default function Index() {
               backgroundColor: theme.colors.success,
             }}
           />
-          <Text 
+          <Text
             className="text-xs font-semibold"
             style={{ color: theme.colors.text.DEFAULT }}
           >
@@ -238,14 +242,17 @@ export default function Index() {
             shadowRadius: 30,
           }}
         >
-          <BoopButton 
+          <BoopButton
             onLongPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
               setIsSettingsVisible(true);
             }}
             onError={(message) => {
               // Handle rate limit errors - show on button with pulse
-              if (message.includes("Rate limit") || message.includes("too fast")) {
+              if (
+                message.includes("Rate limit") ||
+                message.includes("too fast")
+              ) {
                 setRateLimitError(message);
                 // Clear after 5 seconds - using useEffect would be better but this is simpler for now
                 // The error will clear when user tries again or component unmounts
@@ -267,7 +274,7 @@ export default function Index() {
             transform: [{ translateY: helperTextSlideAnim }],
           }}
         >
-          <Text 
+          <Text
             className="text-center text-sm"
             style={{ color: theme.colors.text.muted }}
           >
@@ -286,6 +293,7 @@ export default function Index() {
 
       <SettingsModal
         visible={isSettingsVisible}
+        initialPairedDevice={pairedDevice}
         onClose={() => {
           setIsSettingsVisible(false);
           loadPairedDevice(); // Refresh connection status when settings close
