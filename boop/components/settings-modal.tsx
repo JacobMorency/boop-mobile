@@ -775,34 +775,6 @@ export default function SettingsModal({
                             Theme
                           </Text>
                         </Pressable>
-                        <Pressable
-                          onPress={() => {
-                            Haptics.impactAsync(
-                              Haptics.ImpactFeedbackStyle.Light
-                            );
-                            Alert.alert(
-                              "Donations Coming Soon",
-                              "Donations will be available soon! 🎉"
-                            );
-                          }}
-                          className="rounded-lg px-4 py-2 items-center justify-center min-w-[80px]"
-                          style={({ pressed }) => ({
-                            opacity: pressed ? 0.8 : 1,
-                            backgroundColor: theme.colors.bg.DEFAULT,
-                          })}
-                        >
-                          <Icon
-                            name="heart"
-                            size={18}
-                            color={theme.colors.text.muted}
-                          />
-                          <Text
-                            className="mt-1 text-xs font-medium"
-                            style={{ color: theme.colors.text.muted }}
-                          >
-                            Donate
-                          </Text>
-                        </Pressable>
                       </View>
                       {/* App Version */}
                       <Text
