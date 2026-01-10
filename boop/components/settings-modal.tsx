@@ -485,20 +485,20 @@ export default function SettingsModal({
                     {/* Your Code */}
                     <View className="mb-8">
                       <Text
-                        className="mb-2 text-sm font-medium"
+                        className="mb-3 text-sm font-medium"
                         style={{ color: theme.colors.text.muted }}
                       >
                         Your Code
                       </Text>
                       <View
-                        className="rounded-lg p-3"
+                        className="rounded-xl px-4 py-3.5"
                         style={{
                           backgroundColor: theme.colors.bg.DEFAULT,
                         }}
                       >
                         <View className="flex-row items-center justify-between">
                           <Text
-                            className="text-xl font-bold tracking-widest"
+                            className="text-lg font-semibold tracking-widest"
                             style={{ color: theme.colors.text.DEFAULT }}
                           >
                             {currentDevice.code || "Loading..."}
@@ -564,7 +564,7 @@ export default function SettingsModal({
                     {/* Your Name */}
                     <View className="mb-8">
                       <Text
-                        className="mb-2 text-sm font-medium"
+                        className="mb-3 text-sm font-medium"
                         style={{ color: theme.colors.text.muted }}
                       >
                         Your Name
@@ -578,10 +578,14 @@ export default function SettingsModal({
                             placeholderTextColor={theme.colors.text.muted}
                             autoCapitalize="words"
                             autoCorrect={false}
-                            className="rounded-lg px-3 py-2 text-base"
+                            className="rounded-xl text-base"
                             style={{
                               backgroundColor: theme.colors.bg.DEFAULT,
                               color: theme.colors.text.DEFAULT,
+                              paddingHorizontal: 16,
+                              paddingVertical: 14,
+                              textAlignVertical: "center",
+                              height: 48,
                             }}
                             maxLength={50}
                           />
@@ -601,7 +605,7 @@ export default function SettingsModal({
                         </View>
                       ) : (
                         <View
-                          className="flex-row items-center justify-between rounded-lg p-3"
+                          className="flex-row items-center justify-between rounded-xl px-4 py-3.5"
                           style={{
                             backgroundColor: theme.colors.bg.DEFAULT,
                           }}
@@ -632,14 +636,14 @@ export default function SettingsModal({
                     {/* Connection Status */}
                     <View className="mb-8">
                       <Text
-                        className="mb-2 text-sm font-medium"
+                        className="mb-3 text-sm font-medium"
                         style={{ color: theme.colors.text.muted }}
                       >
                         Connection Status
                       </Text>
                       {isLoading && !pairedDevice ? (
                         <View
-                          className="rounded-lg p-3"
+                          className="rounded-xl px-4 py-3.5"
                           style={{
                             backgroundColor: theme.colors.bg.DEFAULT,
                           }}
@@ -663,19 +667,19 @@ export default function SettingsModal({
                         </View>
                       ) : pairedDevice ? (
                         <View
-                          className="rounded-lg p-3"
+                          className="rounded-xl px-4 py-3.5"
                           style={{
                             backgroundColor: theme.colors.bg.DEFAULT,
                           }}
                         >
                           <Text
-                            className="text-sm"
+                            className="text-sm mb-1"
                             style={{ color: theme.colors.text.muted }}
                           >
                             Connected to:
                           </Text>
                           <Text
-                            className="text-base font-medium"
+                            className="text-base font-medium mb-1"
                             style={{ color: theme.colors.text.DEFAULT }}
                           >
                             Device {pairedDevice.code}
@@ -692,7 +696,7 @@ export default function SettingsModal({
                         </View>
                       ) : (
                         <View
-                          className="rounded-lg p-3"
+                          className="rounded-xl px-4 py-3.5"
                           style={{
                             backgroundColor: theme.colors.bg.DEFAULT,
                           }}
