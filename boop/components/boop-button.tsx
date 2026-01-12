@@ -1,8 +1,28 @@
-import { Pressable, Text, View, Animated } from "react-native";
-import { useRef, useEffect, useMemo } from "react";
+import {
+  Pressable,
+  Text,
+  View,
+  Animated,
+  Easing,
+  AppState,
+} from "react-native";
+import { useRef, useEffect, useMemo, useState, useCallback } from "react";
 import * as Haptics from "expo-haptics";
 import { DeviceService } from "@/lib/deviceService";
 import { useTheme } from "@/lib/themeContext";
+
+// Motion constants
+const MOTION_CONSTANTS = {
+  PRESS_SCALE: 0.92,
+  PRESS_DURATION: 80,
+  RELEASE_SPRING_TENSION: 250,
+  RELEASE_SPRING_FRICTION: 7,
+  IDLE_SCALE_MAX: 1.02,
+  IDLE_CYCLE_DURATION: 4000,
+  IDLE_GLOW_MIN: 0.25,
+  IDLE_GLOW_MAX: 0.35,
+  IDLE_RESUME_DELAY: 500,
+};
 
 export type BoopButtonProps = {
   onLongPress?: () => void;
@@ -11,7 +31,12 @@ export type BoopButtonProps = {
   rateLimitError?: string | null;
 };
 
-export default function BoopButton({ onLongPress, onError, isPaired = false, rateLimitError }: BoopButtonProps) {
+export default function BoopButton({
+  onLongPress,
+  onError,
+  isPaired = false,
+  rateLimitError,
+}: BoopButtonProps) {
   const { theme } = useTheme();
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const shadowAnim = useRef(new Animated.Value(0.3)).current;
@@ -22,14 +47,18 @@ export default function BoopButton({ onLongPress, onError, isPaired = false, rat
   const rotationAnim = useRef(new Animated.Value(0)).current;
   const rippleAnim = useRef(new Animated.Value(0)).current;
 
-  const breathingAnimationRef = useRef<Animated.CompositeAnimation | null>(null);
+  const breathingAnimationRef = useRef<Animated.CompositeAnimation | null>(
+    null
+  );
   const glowAnimationRef = useRef<Animated.CompositeAnimation | null>(null);
   const readyGlowAnim = useRef(new Animated.Value(0.3)).current;
   const rateLimitPulseAnim = useRef(new Animated.Value(1)).current;
   const rateLimitPulseRef = useRef<Animated.CompositeAnimation | null>(null);
+  const [isIdlePaused, setIsIdlePaused] = useState(false);
+  const idleResumeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Start breathing animation on mount
-  useEffect(() => {
+  // Idle animation with pause/resume capability
+  const startIdleAnimation = useCallback(() => {
     // Stop any existing animations
     if (breathingAnimationRef.current) {
       breathingAnimationRef.current.stop();
@@ -38,16 +67,19 @@ export default function BoopButton({ onLongPress, onError, isPaired = false, rat
       glowAnimationRef.current.stop();
     }
 
+    // Subtle breath animation - 4s cycle, scale 1.0 → 1.02
     const breathingAnimation = Animated.loop(
       Animated.sequence([
         Animated.timing(breathingAnim, {
-          toValue: 1.05,
-          duration: 2000,
+          toValue: MOTION_CONSTANTS.IDLE_SCALE_MAX,
+          duration: MOTION_CONSTANTS.IDLE_CYCLE_DURATION / 2,
+          easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
         Animated.timing(breathingAnim, {
-          toValue: 1,
-          duration: 2000,
+          toValue: 1.0,
+          duration: MOTION_CONSTANTS.IDLE_CYCLE_DURATION / 2,
+          easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
       ])
@@ -55,26 +87,70 @@ export default function BoopButton({ onLongPress, onError, isPaired = false, rat
     breathingAnimationRef.current = breathingAnimation;
     breathingAnimation.start();
 
-    // Synchronized glow animation
+    // Subtle glow animation - 0.25 → 0.35
     const glowAnimation = Animated.loop(
       Animated.sequence([
         Animated.timing(glowAnim, {
-          toValue: 0.6,
-          duration: 2000,
+          toValue: MOTION_CONSTANTS.IDLE_GLOW_MAX,
+          duration: MOTION_CONSTANTS.IDLE_CYCLE_DURATION / 2,
+          easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
         Animated.timing(glowAnim, {
-          toValue: 0.3,
-          duration: 2000,
+          toValue: MOTION_CONSTANTS.IDLE_GLOW_MIN,
+          duration: MOTION_CONSTANTS.IDLE_CYCLE_DURATION / 2,
+          easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
       ])
     );
     glowAnimationRef.current = glowAnimation;
     glowAnimation.start();
+  }, [breathingAnim, glowAnim]);
+
+  const pauseIdleAnimation = useCallback(() => {
+    if (breathingAnimationRef.current) {
+      breathingAnimationRef.current.stop();
+    }
+    if (glowAnimationRef.current) {
+      glowAnimationRef.current.stop();
+    }
+    setIsIdlePaused(true);
+  }, []);
+
+  const resumeIdleAnimation = useCallback(() => {
+    // Clear any pending resume timeout
+    if (idleResumeTimeoutRef.current) {
+      clearTimeout(idleResumeTimeoutRef.current);
+      idleResumeTimeoutRef.current = null;
+    }
+
+    breathingAnim.setValue(1.0); // Reset to base
+    glowAnim.setValue(MOTION_CONSTANTS.IDLE_GLOW_MIN); // Reset to base
+    setIsIdlePaused(false);
+    // Start animation after state update
+    setTimeout(() => {
+      startIdleAnimation();
+    }, 0);
+  }, [breathingAnim, glowAnim, startIdleAnimation]);
+
+  // Start idle animation on mount and when app state changes
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (nextAppState) => {
+      if (nextAppState === "active" && !isIdlePaused) {
+        startIdleAnimation();
+      } else if (nextAppState === "background" || nextAppState === "inactive") {
+        pauseIdleAnimation();
+      }
+    });
+
+    if (!isIdlePaused) {
+      startIdleAnimation();
+    }
 
     // Cleanup on unmount
     return () => {
+      subscription.remove();
       if (breathingAnimationRef.current) {
         breathingAnimationRef.current.stop();
         breathingAnimationRef.current = null;
@@ -83,8 +159,12 @@ export default function BoopButton({ onLongPress, onError, isPaired = false, rat
         glowAnimationRef.current.stop();
         glowAnimationRef.current = null;
       }
+      if (idleResumeTimeoutRef.current) {
+        clearTimeout(idleResumeTimeoutRef.current);
+        idleResumeTimeoutRef.current = null;
+      }
     };
-  }, [breathingAnim, glowAnim]);
+  }, [isIdlePaused, startIdleAnimation, pauseIdleAnimation]);
 
   // Enhanced glow when paired and ready
   useEffect(() => {
@@ -102,7 +182,7 @@ export default function BoopButton({ onLongPress, onError, isPaired = false, rat
         useNativeDriver: true,
       }).start();
     }
-  }, [isPaired, rateLimitError]);
+  }, [isPaired, rateLimitError, readyGlowAnim]);
 
   // Subtle pulse animation when rate limited
   useEffect(() => {
@@ -143,12 +223,9 @@ export default function BoopButton({ onLongPress, onError, isPaired = false, rat
         rateLimitPulseRef.current = null;
       }
     };
-  }, [rateLimitError]);
+  }, [rateLimitError, rateLimitPulseAnim]);
 
   const handleBoop = async () => {
-    // Haptic feedback for press
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
     // Ripple effect
     Animated.sequence([
       Animated.timing(rippleAnim, {
@@ -182,7 +259,7 @@ export default function BoopButton({ onLongPress, onError, isPaired = false, rat
       if (result.success) {
         // Success haptic feedback
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        
+
         // Enhanced success animation: scale bounce + text animation
         // First, add a subtle scale bounce to the button
         Animated.sequence([
@@ -247,27 +324,36 @@ export default function BoopButton({ onLongPress, onError, isPaired = false, rat
   };
 
   const handlePressIn = () => {
+    // Immediate feedback - no spring delay
+    // Immediate feedback - native driver animations
     Animated.parallel([
-      Animated.spring(scaleAnim, {
-        toValue: 0.9,
-        tension: 300,
-        friction: 10,
+      Animated.timing(scaleAnim, {
+        toValue: MOTION_CONSTANTS.PRESS_SCALE,
+        duration: MOTION_CONSTANTS.PRESS_DURATION,
+        easing: Easing.out(Easing.ease),
         useNativeDriver: true,
       }),
       Animated.timing(shadowAnim, {
-        toValue: 0.1,
-        duration: 150,
+        toValue: 0.15,
+        duration: MOTION_CONSTANTS.PRESS_DURATION,
         useNativeDriver: true,
       }),
     ]).start();
+
+    // Haptic immediately
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    // Pause idle animation
+    pauseIdleAnimation();
   };
 
   const handlePressOut = () => {
+    // Satisfying spring back
     Animated.parallel([
       Animated.spring(scaleAnim, {
-        toValue: 1,
-        tension: 200,
-        friction: 8,
+        toValue: 1.0,
+        tension: MOTION_CONSTANTS.RELEASE_SPRING_TENSION,
+        friction: MOTION_CONSTANTS.RELEASE_SPRING_FRICTION,
         useNativeDriver: true,
       }),
       Animated.timing(shadowAnim, {
@@ -276,6 +362,15 @@ export default function BoopButton({ onLongPress, onError, isPaired = false, rat
         useNativeDriver: true,
       }),
     ]).start();
+
+    // Resume idle animation after delay
+    if (idleResumeTimeoutRef.current) {
+      clearTimeout(idleResumeTimeoutRef.current);
+    }
+    idleResumeTimeoutRef.current = setTimeout(() => {
+      resumeIdleAnimation();
+      idleResumeTimeoutRef.current = null;
+    }, MOTION_CONSTANTS.IDLE_RESUME_DELAY) as unknown as NodeJS.Timeout;
   };
 
   // Use theme colors dynamically - recreate interpolation when theme changes
@@ -308,14 +403,21 @@ export default function BoopButton({ onLongPress, onError, isPaired = false, rat
       <Animated.View
         style={{
           transform: [
-            { scale: Animated.multiply(scaleAnim, Animated.multiply(breathingAnim, rateLimitPulseAnim)) },
+            {
+              scale: Animated.multiply(
+                scaleAnim,
+                Animated.multiply(breathingAnim, rateLimitPulseAnim)
+              ),
+            },
             { rotate: rotation },
           ],
           shadowOpacity: Animated.multiply(
             shadowAnim,
             Animated.multiply(glowAnim, readyGlowAnim)
           ),
-          shadowColor: rateLimitError ? theme.colors.danger : theme.colors.primary,
+          shadowColor: rateLimitError
+            ? theme.colors.danger
+            : theme.colors.primary,
           shadowOffset: {
             width: 0,
             height: 8,
@@ -402,7 +504,7 @@ export default function BoopButton({ onLongPress, onError, isPaired = false, rat
           ],
         }}
       >
-        <Text 
+        <Text
           className="text-sm font-semibold"
           style={{ color: theme.colors.success }}
         >
@@ -412,4 +514,3 @@ export default function BoopButton({ onLongPress, onError, isPaired = false, rat
     </View>
   );
 }
-
