@@ -4,9 +4,10 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import BoopButton from "@/components/boop-button";
 import SettingsModal from "@/components/settings-modal";
-import NameInputModal from "@/components/name-input-modal";
 import WelcomeModal from "@/components/welcome-modal";
+import PairingModal from "@/components/pairing-modal";
 import Toast from "@/components/ui/toast";
+import Button from "@/components/ui/button";
 import { DeviceService } from "@/lib/deviceService";
 import { PushNotificationService } from "@/lib/pushNotificationService";
 import { ThemeService } from "@/lib/themeService";
@@ -20,7 +21,7 @@ export default function Index() {
   const [isSettingsVisible, setIsSettingsVisible] = useState(false);
   const [pairedDevice, setPairedDevice] = useState<Device | null>(null);
   const [showWelcome, setShowWelcome] = useState(false);
-  const [showNameInput, setShowNameInput] = useState(false);
+  const [showPairingModal, setShowPairingModal] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
   const [toastType, setToastType] = useState<"error" | "success" | "info">(
     "error"
@@ -101,9 +102,10 @@ export default function Index() {
 
       setPairedDevice(device);
 
-      // Animate helper text based on pairing status
+      // Animate helper text/button based on pairing status
       // Connection animations are handled by useConnectionAnimation hook
       if (!isNowPaired) {
+        // Show pairing button
         Animated.parallel([
           Animated.timing(helperTextAnim, {
             toValue: 1,
@@ -117,15 +119,16 @@ export default function Index() {
           }),
         ]).start();
       } else {
+        // Show helper text for paired state
         Animated.parallel([
           Animated.timing(helperTextAnim, {
-            toValue: 0,
-            duration: 300,
+            toValue: 1,
+            duration: 500,
             useNativeDriver: true,
           }),
           Animated.timing(helperTextSlideAnim, {
-            toValue: 20,
-            duration: 300,
+            toValue: 0,
+            duration: 500,
             useNativeDriver: true,
           }),
         ]).start();
@@ -266,28 +269,62 @@ export default function Index() {
           />
         </Animated.View>
 
-        {/* Helper text when not paired - Animated */}
-        <Animated.View
-          className="mt-8 px-8"
-          style={{
-            opacity: helperTextAnim,
-            transform: [{ translateY: helperTextSlideAnim }],
-          }}
-        >
-          <Text
-            className="text-center text-sm"
-            style={{ color: theme.colors.text.muted }}
+        {/* Pairing button when not paired */}
+        {!pairedDevice && (
+          <Animated.View
+            className="mt-8 px-8"
+            style={{
+              opacity: helperTextAnim,
+              transform: [{ translateY: helperTextSlideAnim }],
+            }}
           >
-            Long press the button to open settings and pair with a partner
-          </Text>
-        </Animated.View>
+            <Button
+              title="Pair with Partner"
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setShowPairingModal(true);
+              }}
+            />
+            <Text
+              className="text-center text-xs mt-3"
+              style={{ color: theme.colors.text.muted, opacity: 0.6 }}
+            >
+              Long press the button to open settings
+            </Text>
+          </Animated.View>
+        )}
+
+        {/* Helper text when paired */}
+        {pairedDevice && (
+          <Animated.View
+            className="mt-8 px-8"
+            style={{
+              opacity: helperTextAnim,
+              transform: [{ translateY: helperTextSlideAnim }],
+            }}
+          >
+            <Text
+              className="text-center text-sm mb-2"
+              style={{ color: theme.colors.text.muted }}
+            >
+              Tap the button to send a boop
+            </Text>
+            <Text
+              className="text-center text-xs"
+              style={{ color: theme.colors.text.muted, opacity: 0.6 }}
+            >
+              Long press to open settings
+            </Text>
+          </Animated.View>
+        )}
       </View>
 
       <WelcomeModal
         visible={showWelcome}
-        onContinue={() => {
+        onContinue={async (name) => {
           setShowWelcome(false);
-          setShowNameInput(true);
+          // Name is already saved in welcome modal if provided
+          await loadPairedDevice(); // Refresh after name setup
         }}
       />
 
@@ -303,11 +340,11 @@ export default function Index() {
         }}
       />
 
-      <NameInputModal
-        visible={showNameInput}
-        onComplete={() => {
-          setShowNameInput(false);
-          loadPairedDevice(); // Refresh after name setup
+      <PairingModal
+        visible={showPairingModal}
+        onClose={() => {
+          setShowPairingModal(false);
+          loadPairedDevice(); // Refresh connection status after pairing
         }}
       />
     </SafeAreaView>

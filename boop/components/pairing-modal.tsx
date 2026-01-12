@@ -9,6 +9,7 @@ import {
   Animated,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import * as Haptics from "expo-haptics";
 import { DeviceService } from "@/lib/deviceService";
 import { useTheme } from "@/lib/themeContext";
 import { getModalBackdropColor } from "@/lib/themeService";
@@ -61,6 +62,39 @@ export default function PairingModal({ visible, onClose }: PairingModalProps) {
     }
   }, [showToastMessage]);
 
+  // Smooth exit animation
+  const animateExit = useCallback((): Promise<void> => {
+    return new Promise((resolve) => {
+      Animated.parallel([
+        Animated.timing(backdropAnim, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.parallel([
+          Animated.timing(modalOpacityAnim, {
+            toValue: 0,
+            duration: 200,
+            useNativeDriver: true,
+          }),
+          Animated.timing(modalScaleAnim, {
+            toValue: 0.95,
+            duration: 200,
+            useNativeDriver: true,
+          }),
+        ]),
+      ]).start(() => {
+        resolve();
+      });
+    });
+  }, [backdropAnim, modalOpacityAnim, modalScaleAnim]);
+
+  // Handle close with smooth animation
+  const handleClose = useCallback(async () => {
+    await animateExit();
+    onClose();
+  }, [animateExit, onClose]);
+
   // Get device code when modal opens
   useEffect(() => {
     if (visible) {
@@ -101,7 +135,7 @@ export default function PairingModal({ visible, onClose }: PairingModalProps) {
       modalOpacityAnim.setValue(0);
       modalScaleAnim.setValue(0.95);
     }
-  }, [visible, loadDeviceCode]);
+  }, [visible, loadDeviceCode, backdropAnim, modalOpacityAnim, modalScaleAnim]);
 
   // Validate pairing code format
   const validateCode = (code: string): boolean => {
@@ -138,12 +172,15 @@ export default function PairingModal({ visible, onClose }: PairingModalProps) {
       const pairResult = await DeviceService.pairWithDevice(otherDevice.id);
 
       if (pairResult.success) {
-        showToastMessage("Devices paired successfully!", "success");
-        // Close modal after toast is shown - use state to track when to close
-        // The toast will auto-hide after its duration, then we close
-        // For now, we'll close immediately after showing success toast
-        // The toast component handles its own timing
-        onClose();
+        // Haptic feedback (non-blocking)
+        try {
+          await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        } catch (hapticError) {
+          // Ignore haptic errors - not critical
+          console.warn("Haptic feedback failed:", hapticError);
+        }
+        // Animate exit smoothly before closing
+        await handleClose();
       } else {
         showToastMessage(
           pairResult.error ||
@@ -153,9 +190,23 @@ export default function PairingModal({ visible, onClose }: PairingModalProps) {
         setIsConnecting(false);
       }
     } catch (error) {
-      showToastMessage("Failed to pair devices", "error");
-      console.error(error);
-      setIsConnecting(false);
+      // Only show error if pairing actually failed
+      // Check if device is now paired (might have succeeded despite error)
+      const isPaired = await DeviceService.getPairedDevice();
+      if (isPaired) {
+        // Pairing actually succeeded, just provide haptic feedback
+        try {
+          await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        } catch (hapticError) {
+          // Ignore haptic errors
+        }
+        // Animate exit smoothly before closing
+        await handleClose();
+      } else {
+        showToastMessage("Failed to pair devices", "error");
+        console.error(error);
+        setIsConnecting(false);
+      }
     }
   };
   return (
@@ -163,7 +214,7 @@ export default function PairingModal({ visible, onClose }: PairingModalProps) {
       visible={visible}
       animationType="fade"
       transparent
-      onRequestClose={onClose}
+      onRequestClose={handleClose}
     >
       <SafeAreaView className="flex-1">
         <Toast
@@ -256,7 +307,7 @@ export default function PairingModal({ visible, onClose }: PairingModalProps) {
               <View className="flex-row gap-3">
                 <Button
                   title="Cancel"
-                  onPress={onClose}
+                  onPress={handleClose}
                   variant="secondary"
                   className="flex-1"
                 />
